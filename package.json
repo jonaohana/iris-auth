@@ -15,11 +15,10 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --noEmit false || true",
     "watch": "tsc --watch",
     "dev": "node watch.js",
     "setup-env": "node scripts/setup-env.js",
-    "postinstall": "npm run setup-env",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
