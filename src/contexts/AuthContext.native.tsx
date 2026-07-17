@@ -35,6 +35,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ auth: authProp, conf
         
         unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
           if (firebaseUser) {
+            // Log everything we know about the authenticated user
+            console.log('[@iris/auth] Signed in \u2014 user info:', {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              emailVerified: firebaseUser.emailVerified,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              phoneNumber: firebaseUser.phoneNumber,
+              isAnonymous: firebaseUser.isAnonymous,
+              providers: firebaseUser.providerData.map((p) => p.providerId),
+              createdAt: firebaseUser.metadata?.creationTime,
+              lastSignInAt: firebaseUser.metadata?.lastSignInTime,
+            });
             setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email,
@@ -42,6 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ auth: authProp, conf
               photoURL: firebaseUser.photoURL,
             });
           } else {
+            console.log('[@iris/auth] Signed out \u2014 no user');
             setUser(null);
           }
           setLoading(false);

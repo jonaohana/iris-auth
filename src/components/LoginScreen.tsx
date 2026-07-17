@@ -12,14 +12,21 @@ import {
 import { useAuth } from '../hooks';
 import { AuthButton } from './AuthButton';
 import { PhoneLoginInput } from './PhoneLoginInput';
+import { VantaBackground } from './VantaBackground';
 import { theme } from '../theme';
 import { LoginScreenProps } from '../types';
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
   showSignUp = true,
+  vanta,
+  backgroundImage,
+  modalOpacity = 0.93,
+  headerTextColor,
+  footerTextColor,
+  appName = 'the Hub',
 }) => {
-  const { signInWithGoogle, signInWithApple, signInWithFacebook, signInWithEmail, signUpWithEmail, error, loading } =
+  const { signInWithGoogle, signInWithApple, signInWithFacebook, signInWithEmail, signUpWithEmail, error, loading, user, signOut } =
     useAuth();
 
   const [email, setEmail] = useState('');
@@ -84,15 +91,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
+  const handleSignOut = async () => {
+    setLocalLoading(true);
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Sign-out error:', err);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
   const Container = Platform.OS === 'web' ? View : KeyboardAvoidingView;
   const containerProps = Platform.OS === 'web' ? {} : { behavior: 'padding' as const };
 
-  return (
-    <Container style={styles.container} {...containerProps}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome to Iris</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+  const formContent = (
+    <View style={[
+      styles.content,
+      vanta && Platform.OS === 'web' ? [
+        styles.contentCard,
+        { backgroundColor: `rgba(255,255,255,${modalOpacity})` } as any
+      ] : null
+    ]}>
+      <View style={styles.header}>
+          <Text style={[styles.title, headerTextColor && { color: headerTextColor } as any]}>Welcome to {appName}</Text>
+          <Text style={[styles.subtitle, headerTextColor && { color: headerTextColor } as any]}>Sign in to continue</Text>
         </View>
 
         {error && (
@@ -179,7 +202,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   disabled={localLoading}
                   style={styles.toggleButton}
                 >
-                  <Text style={styles.toggleText}>
+                  <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any]}>
                     {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
                   </Text>
                 </Pressable>
@@ -192,12 +215,74 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             disabled={localLoading}
             style={styles.toggleButton}
           >
-            <Text style={styles.toggleText}>
+            <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any]}>
               {usePhoneAuth ? 'Use email instead' : 'Use phone number instead'}
             </Text>
           </Pressable>
         </View>
+    </View>
+  );
+
+  const signedInLabel = user?.displayName || user?.email || user?.phoneNumber || 'your account';
+
+  // Logged-in state — shown when returning to /login while already authenticated.
+  const loggedInContent = (
+    <View style={[
+      styles.content,
+      vanta && Platform.OS === 'web' ? [
+        styles.contentCard,
+        { backgroundColor: `rgba(255,255,255,${modalOpacity})` } as any
+      ] : null
+    ]}>
+      <View style={styles.header}>
+        <View style={styles.onlineBadge}>
+          <View style={styles.onlineDot} />
+          <Text style={styles.onlineText}>Online</Text>
+        </View>
+        <Text style={[styles.title, headerTextColor && { color: headerTextColor } as any]}>You're logged in</Text>
+        <Text style={[styles.subtitle, headerTextColor && { color: headerTextColor } as any]}>
+          Signed in as {signedInLabel}
+        </Text>
+        {user?.displayName && user?.email ? (
+          <Text style={[styles.subtitle, headerTextColor && { color: headerTextColor } as any]}>{user.email}</Text>
+        ) : null}
       </View>
+
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      <AuthButton
+        provider="email"
+        title="Log Out"
+        onPress={handleSignOut}
+        loading={localLoading}
+        disabled={localLoading}
+      />
+
+      <Pressable onPress={handleSignOut} disabled={localLoading} style={styles.toggleButton}>
+        <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any]}>
+          Not you? Log out to switch accounts
+        </Text>
+      </Pressable>
+    </View>
+  );
+
+  const screenContent = user ? loggedInContent : formContent;
+
+  if (vanta && Platform.OS === 'web') {
+    return <VantaBackground vanta={vanta} backgroundImage={backgroundImage}>{screenContent}</VantaBackground>;
+  }
+
+  const containerStyle = backgroundImage && Platform.OS === 'web'
+    ? [styles.container, { backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } as any]
+    : styles.container;
+
+  return (
+    <Container style={containerStyle} {...containerProps}>
+      {screenContent}
     </Container>
   );
 };
@@ -229,9 +314,42 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  contentCard: {
+    ...Platform.select({
+      web: {
+        borderRadius: 20,
+        boxShadow: '0 8px 40px rgba(0,0,0,0.25)',
+        backdropFilter: 'blur(8px)',
+      } as any,
+    }),
+  },
   header: {
     marginBottom: theme.spacing.xl,
     alignItems: 'center',
+  },
+  onlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    marginBottom: theme.spacing.md,
+  },
+  onlineDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#22c55e',
+  },
+  onlineText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803d',
+    letterSpacing: 0.3,
   },
   title: {
     ...theme.typography.h1,

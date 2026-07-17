@@ -60,6 +60,19 @@ const AuthProvider = ({ auth: authProp, config, children }) => {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 unsubscribe = (0, auth_1.onAuthStateChanged)(auth, (firebaseUser) => {
                     if (firebaseUser) {
+                        // Log everything we know about the authenticated user
+                        console.log('[@iris/auth] Signed in \u2014 user info:', {
+                            uid: firebaseUser.uid,
+                            email: firebaseUser.email,
+                            emailVerified: firebaseUser.emailVerified,
+                            displayName: firebaseUser.displayName,
+                            photoURL: firebaseUser.photoURL,
+                            phoneNumber: firebaseUser.phoneNumber,
+                            isAnonymous: firebaseUser.isAnonymous,
+                            providers: firebaseUser.providerData.map((p) => p.providerId),
+                            createdAt: firebaseUser.metadata?.creationTime,
+                            lastSignInAt: firebaseUser.metadata?.lastSignInTime,
+                        });
                         setUser({
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
@@ -68,6 +81,7 @@ const AuthProvider = ({ auth: authProp, config, children }) => {
                         });
                     }
                     else {
+                        console.log('[@iris/auth] Signed out \u2014 no user');
                         setUser(null);
                     }
                     setLoading(false);

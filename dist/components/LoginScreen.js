@@ -39,9 +39,10 @@ const react_native_1 = require("react-native");
 const hooks_1 = require("../hooks");
 const AuthButton_1 = require("./AuthButton");
 const PhoneLoginInput_1 = require("./PhoneLoginInput");
+const VantaBackground_1 = require("./VantaBackground");
 const theme_1 = require("../theme");
-const LoginScreen = ({ onLoginSuccess, showSignUp = true, }) => {
-    const { signInWithGoogle, signInWithApple, signInWithFacebook, signInWithEmail, signUpWithEmail, error, loading } = (0, hooks_1.useAuth)();
+const LoginScreen = ({ onLoginSuccess, showSignUp = true, vanta, backgroundImage, modalOpacity = 0.93, headerTextColor, footerTextColor, appName = 'the Hub', }) => {
+    const { signInWithGoogle, signInWithApple, signInWithFacebook, signInWithEmail, signUpWithEmail, error, loading, user, signOut } = (0, hooks_1.useAuth)();
     const [email, setEmail] = (0, react_1.useState)('');
     const [password, setPassword] = (0, react_1.useState)('');
     const [isSignUp, setIsSignUp] = (0, react_1.useState)(false);
@@ -107,32 +108,82 @@ const LoginScreen = ({ onLoginSuccess, showSignUp = true, }) => {
             setLocalLoading(false);
         }
     };
+    const handleSignOut = async () => {
+        setLocalLoading(true);
+        try {
+            await signOut();
+        }
+        catch (err) {
+            console.error('Sign-out error:', err);
+        }
+        finally {
+            setLocalLoading(false);
+        }
+    };
     const Container = react_native_1.Platform.OS === 'web' ? react_native_1.View : react_native_1.KeyboardAvoidingView;
     const containerProps = react_native_1.Platform.OS === 'web' ? {} : { behavior: 'padding' };
-    return (react_1.default.createElement(Container, { style: styles.container, ...containerProps },
-        react_1.default.createElement(react_native_1.View, { style: styles.content },
-            react_1.default.createElement(react_native_1.View, { style: styles.header },
-                react_1.default.createElement(react_native_1.Text, { style: styles.title }, "Welcome to Iris"),
-                react_1.default.createElement(react_native_1.Text, { style: styles.subtitle }, "Sign in to continue")),
-            error && (react_1.default.createElement(react_native_1.View, { style: styles.errorContainer },
-                react_1.default.createElement(react_native_1.Text, { style: styles.errorText }, error))),
-            react_1.default.createElement(react_native_1.View, { style: styles.socialButtons },
-                react_1.default.createElement(AuthButton_1.AuthButton, { provider: "google", title: "Continue with Google", onPress: handleGoogleSignIn, loading: localLoading && !email, disabled: localLoading, icon: react_1.default.createElement(react_native_1.Text, { style: styles.googleIcon }, "G") }),
-                react_1.default.createElement(AuthButton_1.AuthButton, { provider: "facebook", title: "Continue with Facebook", onPress: handleFacebookSignIn, loading: localLoading && !email, disabled: localLoading, icon: react_1.default.createElement(react_native_1.Text, { style: styles.facebookIcon }, "f") }),
-                react_1.default.createElement(AuthButton_1.AuthButton, { provider: "apple", title: "Continue with Apple", onPress: handleAppleSignIn, loading: localLoading && !email, disabled: localLoading, icon: react_1.default.createElement(react_native_1.Text, { style: styles.appleIcon }) })),
-            react_1.default.createElement(react_native_1.View, { style: styles.divider },
-                react_1.default.createElement(react_native_1.View, { style: styles.dividerLine }),
-                react_1.default.createElement(react_native_1.Text, { style: styles.dividerText }, "or"),
-                react_1.default.createElement(react_native_1.View, { style: styles.dividerLine })),
-            react_1.default.createElement(react_native_1.View, { style: styles.emailForm },
-                usePhoneAuth ? (react_1.default.createElement(PhoneLoginInput_1.PhoneLoginInput, { onSuccess: onLoginSuccess })) : (react_1.default.createElement(react_1.default.Fragment, null,
-                    react_1.default.createElement(react_native_1.TextInput, { style: styles.input, placeholder: "Email", placeholderTextColor: theme_1.theme.colors.textSecondary, value: email, onChangeText: setEmail, keyboardType: "email-address", autoCapitalize: "none", autoComplete: "email", editable: !localLoading }),
-                    react_1.default.createElement(react_native_1.TextInput, { style: styles.input, placeholder: "Password", placeholderTextColor: theme_1.theme.colors.textSecondary, value: password, onChangeText: setPassword, secureTextEntry: true, autoCapitalize: "none", autoComplete: "password", editable: !localLoading }),
-                    react_1.default.createElement(AuthButton_1.AuthButton, { provider: "email", title: isSignUp ? 'Sign Up' : 'Sign In', onPress: handleEmailAuth, loading: localLoading && !!email, disabled: !email || !password || localLoading }),
-                    showSignUp && (react_1.default.createElement(react_native_1.Pressable, { onPress: () => setIsSignUp(!isSignUp), disabled: localLoading, style: styles.toggleButton },
-                        react_1.default.createElement(react_native_1.Text, { style: styles.toggleText }, isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"))))),
-                react_1.default.createElement(react_native_1.Pressable, { onPress: () => setUsePhoneAuth(!usePhoneAuth), disabled: localLoading, style: styles.toggleButton },
-                    react_1.default.createElement(react_native_1.Text, { style: styles.toggleText }, usePhoneAuth ? 'Use email instead' : 'Use phone number instead'))))));
+    const formContent = (react_1.default.createElement(react_native_1.View, { style: [
+            styles.content,
+            vanta && react_native_1.Platform.OS === 'web' ? [
+                styles.contentCard,
+                { backgroundColor: `rgba(255,255,255,${modalOpacity})` }
+            ] : null
+        ] },
+        react_1.default.createElement(react_native_1.View, { style: styles.header },
+            react_1.default.createElement(react_native_1.Text, { style: [styles.title, headerTextColor && { color: headerTextColor }] },
+                "Welcome to ",
+                appName),
+            react_1.default.createElement(react_native_1.Text, { style: [styles.subtitle, headerTextColor && { color: headerTextColor }] }, "Sign in to continue")),
+        error && (react_1.default.createElement(react_native_1.View, { style: styles.errorContainer },
+            react_1.default.createElement(react_native_1.Text, { style: styles.errorText }, error))),
+        react_1.default.createElement(react_native_1.View, { style: styles.socialButtons },
+            react_1.default.createElement(AuthButton_1.AuthButton, { provider: "google", title: "Continue with Google", onPress: handleGoogleSignIn, loading: localLoading && !email, disabled: localLoading, icon: react_1.default.createElement(react_native_1.Text, { style: styles.googleIcon }, "G") }),
+            react_1.default.createElement(AuthButton_1.AuthButton, { provider: "facebook", title: "Continue with Facebook", onPress: handleFacebookSignIn, loading: localLoading && !email, disabled: localLoading, icon: react_1.default.createElement(react_native_1.Text, { style: styles.facebookIcon }, "f") }),
+            react_1.default.createElement(AuthButton_1.AuthButton, { provider: "apple", title: "Continue with Apple", onPress: handleAppleSignIn, loading: localLoading && !email, disabled: localLoading, icon: react_1.default.createElement(react_native_1.Text, { style: styles.appleIcon }) })),
+        react_1.default.createElement(react_native_1.View, { style: styles.divider },
+            react_1.default.createElement(react_native_1.View, { style: styles.dividerLine }),
+            react_1.default.createElement(react_native_1.Text, { style: styles.dividerText }, "or"),
+            react_1.default.createElement(react_native_1.View, { style: styles.dividerLine })),
+        react_1.default.createElement(react_native_1.View, { style: styles.emailForm },
+            usePhoneAuth ? (react_1.default.createElement(PhoneLoginInput_1.PhoneLoginInput, { onSuccess: onLoginSuccess })) : (react_1.default.createElement(react_1.default.Fragment, null,
+                react_1.default.createElement(react_native_1.TextInput, { style: styles.input, placeholder: "Email", placeholderTextColor: theme_1.theme.colors.textSecondary, value: email, onChangeText: setEmail, keyboardType: "email-address", autoCapitalize: "none", autoComplete: "email", editable: !localLoading }),
+                react_1.default.createElement(react_native_1.TextInput, { style: styles.input, placeholder: "Password", placeholderTextColor: theme_1.theme.colors.textSecondary, value: password, onChangeText: setPassword, secureTextEntry: true, autoCapitalize: "none", autoComplete: "password", editable: !localLoading }),
+                react_1.default.createElement(AuthButton_1.AuthButton, { provider: "email", title: isSignUp ? 'Sign Up' : 'Sign In', onPress: handleEmailAuth, loading: localLoading && !!email, disabled: !email || !password || localLoading }),
+                showSignUp && (react_1.default.createElement(react_native_1.Pressable, { onPress: () => setIsSignUp(!isSignUp), disabled: localLoading, style: styles.toggleButton },
+                    react_1.default.createElement(react_native_1.Text, { style: [styles.toggleText, footerTextColor && { color: footerTextColor }] }, isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"))))),
+            react_1.default.createElement(react_native_1.Pressable, { onPress: () => setUsePhoneAuth(!usePhoneAuth), disabled: localLoading, style: styles.toggleButton },
+                react_1.default.createElement(react_native_1.Text, { style: [styles.toggleText, footerTextColor && { color: footerTextColor }] }, usePhoneAuth ? 'Use email instead' : 'Use phone number instead')))));
+    const signedInLabel = user?.displayName || user?.email || user?.phoneNumber || 'your account';
+    // Logged-in state — shown when returning to /login while already authenticated.
+    const loggedInContent = (react_1.default.createElement(react_native_1.View, { style: [
+            styles.content,
+            vanta && react_native_1.Platform.OS === 'web' ? [
+                styles.contentCard,
+                { backgroundColor: `rgba(255,255,255,${modalOpacity})` }
+            ] : null
+        ] },
+        react_1.default.createElement(react_native_1.View, { style: styles.header },
+            react_1.default.createElement(react_native_1.View, { style: styles.onlineBadge },
+                react_1.default.createElement(react_native_1.View, { style: styles.onlineDot }),
+                react_1.default.createElement(react_native_1.Text, { style: styles.onlineText }, "Online")),
+            react_1.default.createElement(react_native_1.Text, { style: [styles.title, headerTextColor && { color: headerTextColor }] }, "You're logged in"),
+            react_1.default.createElement(react_native_1.Text, { style: [styles.subtitle, headerTextColor && { color: headerTextColor }] },
+                "Signed in as ",
+                signedInLabel),
+            user?.displayName && user?.email ? (react_1.default.createElement(react_native_1.Text, { style: [styles.subtitle, headerTextColor && { color: headerTextColor }] }, user.email)) : null),
+        error && (react_1.default.createElement(react_native_1.View, { style: styles.errorContainer },
+            react_1.default.createElement(react_native_1.Text, { style: styles.errorText }, error))),
+        react_1.default.createElement(AuthButton_1.AuthButton, { provider: "email", title: "Log Out", onPress: handleSignOut, loading: localLoading, disabled: localLoading }),
+        react_1.default.createElement(react_native_1.Pressable, { onPress: handleSignOut, disabled: localLoading, style: styles.toggleButton },
+            react_1.default.createElement(react_native_1.Text, { style: [styles.toggleText, footerTextColor && { color: footerTextColor }] }, "Not you? Log out to switch accounts"))));
+    const screenContent = user ? loggedInContent : formContent;
+    if (vanta && react_native_1.Platform.OS === 'web') {
+        return react_1.default.createElement(VantaBackground_1.VantaBackground, { vanta: vanta, backgroundImage: backgroundImage }, screenContent);
+    }
+    const containerStyle = backgroundImage && react_native_1.Platform.OS === 'web'
+        ? [styles.container, { backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }]
+        : styles.container;
+    return (react_1.default.createElement(Container, { style: containerStyle, ...containerProps }, screenContent));
 };
 exports.LoginScreen = LoginScreen;
 const styles = react_native_1.StyleSheet.create({
@@ -162,9 +213,42 @@ const styles = react_native_1.StyleSheet.create({
             },
         }),
     },
+    contentCard: {
+        ...react_native_1.Platform.select({
+            web: {
+                borderRadius: 20,
+                boxShadow: '0 8px 40px rgba(0,0,0,0.25)',
+                backdropFilter: 'blur(8px)',
+            },
+        }),
+    },
     header: {
         marginBottom: theme_1.theme.spacing.xl,
         alignItems: 'center',
+    },
+    onlineBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 999,
+        backgroundColor: '#f0fdf4',
+        borderWidth: 1,
+        borderColor: '#bbf7d0',
+        marginBottom: theme_1.theme.spacing.md,
+    },
+    onlineDot: {
+        width: 9,
+        height: 9,
+        borderRadius: 5,
+        backgroundColor: '#22c55e',
+    },
+    onlineText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#15803d',
+        letterSpacing: 0.3,
     },
     title: {
         ...theme_1.theme.typography.h1,
