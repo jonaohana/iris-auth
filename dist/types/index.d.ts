@@ -1,9 +1,33 @@
+/**
+ * A user's role. Kept as a `string` (not a hard union) so consuming apps can
+ * define their own role sets. The common values are suggested for convenience,
+ * but any string a custom claim carries is accepted.
+ */
+export type Role = 'admin' | 'user' | (string & {});
+/** A granular permission string, e.g. `"billing.read"` or `"posts.publish"`. */
+export type Permission = string;
 export interface AuthUser {
     uid: string;
     email: string | null;
     displayName: string | null;
     photoURL: string | null;
     phoneNumber?: string | null;
+    /**
+     * The user's primary role, read from the `role` custom claim on the Firebase
+     * ID token. `null` when the user has no role claim yet.
+     */
+    role: Role | null;
+    /**
+     * Granular permissions, read from the `permissions` custom claim. Empty array
+     * when the claim is absent. Use this when a single role isn't fine-grained
+     * enough (see `hasPermission`).
+     */
+    permissions: Permission[];
+    /**
+     * The full, raw custom-claims object from the ID token. Use this to read any
+     * bespoke claim your backend sets beyond `role`/`permissions`.
+     */
+    claims: Record<string, any>;
 }
 export interface AuthConfig {
     googleWebClientId?: string;
@@ -15,6 +39,14 @@ export interface AuthConfig {
     facebookAppId?: string;
     facebookAppSecret?: string;
     redirectUri?: string;
+    /**
+     * Roles that implicitly satisfy any `hasPermission` check (an "admin bypass").
+     * A user whose `role` is in this list passes every permission check without
+     * the permission needing to be listed in their `permissions` claim.
+     * Defaults to `['admin']`. Pass `[]` to disable the bypass and require every
+     * permission to be explicit.
+     */
+    superRoles?: Role[];
 }
 export interface AuthContextValue {
     user: AuthUser | null;
@@ -28,8 +60,27 @@ export interface AuthContextValue {
     signInWithPhone: (phoneNumber: string, appVerifier: any) => Promise<any>;
     verifyPhoneCode: (verificationId: string, code: string) => Promise<void>;
     signOut: () => Promise<void>;
+    /**
+     * Force-refresh the ID token and re-read custom claims into `user`. Call this
+     * after your backend changes a user's role/permissions so the change takes
+     * effect without the user signing out and back in.
+     */
+    refreshUser: () => Promise<void>;
+    /**
+     * True when the current user's `role` matches `role` (string) or is one of
+     * `role` (array). Returns false when signed out.
+     */
+    hasRole: (role: Role | Role[]) => boolean;
+    /**
+     * True when the current user has the given permission. Pass an array to
+     * require ALL of them. Users whose role is in `config.superRoles`
+     * (default `['admin']`) pass automatically.
+     */
+    hasPermission: (permission: Permission | Permission[]) => boolean;
 }
-export type AuthProvider = 'google' | 'apple' | 'facebook' | 'email' | 'phone';
+export type AuthProviderId = 'google' | 'apple' | 'facebook' | 'email' | 'phone';
+/** @deprecated Use {@link AuthProviderId}; kept for backwards compatibility. */
+export type AuthProvider = AuthProviderId;
 export type VantaEffectName = 'birds' | 'waves' | 'fog' | 'net' | 'globe' | 'cells' | 'rings' | 'halo' | 'clouds' | 'clouds2' | 'trunk' | 'topology' | 'dots';
 export interface VantaConfig {
     effect: VantaEffectName;

@@ -47,6 +47,7 @@ export const UserBadge: React.FC<UserBadgeProps> = ({
   onSignOut,
   onLogin,
   loginLabel = 'Log in',
+  avatarUrl,
   colors,
   style,
 }) => {
@@ -122,9 +123,9 @@ export const UserBadge: React.FC<UserBadgeProps> = ({
         ]}
       >
         <View style={[styles.onlineDot, { backgroundColor: c.dot }]} />
-        {user.photoURL ? (
+        {(avatarUrl ?? user.photoURL) ? (
           <Image
-            source={{ uri: user.photoURL }}
+            source={{ uri: (avatarUrl ?? user.photoURL) as string }}
             style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
           />
         ) : (

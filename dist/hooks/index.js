@@ -1,5 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.useAuth = void 0;
+exports.usePermissions = exports.useRole = exports.useHasPermission = exports.useHasRole = exports.useAuth = void 0;
 var AuthContext_1 = require("../contexts/AuthContext");
 Object.defineProperty(exports, "useAuth", { enumerable: true, get: function () { return AuthContext_1.useAuth; } });
+var useRoles_1 = require("./useRoles");
+Object.defineProperty(exports, "useHasRole", { enumerable: true, get: function () { return useRoles_1.useHasRole; } });
+Object.defineProperty(exports, "useHasPermission", { enumerable: true, get: function () { return useRoles_1.useHasPermission; } });
+Object.defineProperty(exports, "useRole", { enumerable: true, get: function () { return useRoles_1.useRole; } });
+Object.defineProperty(exports, "usePermissions", { enumerable: true, get: function () { return useRoles_1.usePermissions; } });

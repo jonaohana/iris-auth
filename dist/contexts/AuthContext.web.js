@@ -37,6 +37,33 @@ exports.useAuth = exports.AuthProvider = void 0;
 const react_1 = __importStar(require("react"));
 const auth_1 = require("firebase/auth");
 const authService_web_1 = require("../services/authService.web");
+const roleHelpers_1 = require("./roleHelpers");
+/**
+ * Build an AuthUser from a Firebase user, reading role/permissions from its ID
+ * token custom claims. `forceRefresh` re-fetches the token from the server so
+ * newly-assigned claims are picked up immediately.
+ */
+async function toAuthUser(firebaseUser, forceRefresh = false) {
+    let claims = {};
+    try {
+        const tokenResult = await firebaseUser.getIdTokenResult(forceRefresh);
+        claims = tokenResult.claims || {};
+    }
+    catch (err) {
+        console.error('[@iris/auth] Failed to read ID token claims:', err);
+    }
+    const { role, permissions } = (0, roleHelpers_1.extractRoleInfo)(claims);
+    return {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+        phoneNumber: firebaseUser.phoneNumber,
+        role,
+        permissions,
+        claims,
+    };
+}
 const AuthContext = (0, react_1.createContext)(undefined);
 const AuthProvider = ({ auth: authProp, config, children }) => {
     // Lazy load default auth only if not provided
@@ -58,8 +85,9 @@ const AuthProvider = ({ auth: authProp, config, children }) => {
             try {
                 // Wait a tick to ensure auth is ready
                 await new Promise(resolve => setTimeout(resolve, 100));
-                unsubscribe = (0, auth_1.onAuthStateChanged)(auth, (firebaseUser) => {
+                unsubscribe = (0, auth_1.onAuthStateChanged)(auth, async (firebaseUser) => {
                     if (firebaseUser) {
+                        const authUser = await toAuthUser(firebaseUser);
                         // Log everything we know about the authenticated user
                         console.log('[@iris/auth] Signed in \u2014 user info:', {
                             uid: firebaseUser.uid,
@@ -72,14 +100,10 @@ const AuthProvider = ({ auth: authProp, config, children }) => {
                             providers: firebaseUser.providerData.map((p) => p.providerId),
                             createdAt: firebaseUser.metadata?.creationTime,
                             lastSignInAt: firebaseUser.metadata?.lastSignInTime,
+                            role: authUser.role,
+                            permissions: authUser.permissions,
                         });
-                        setUser({
-                            uid: firebaseUser.uid,
-                            email: firebaseUser.email,
-                            displayName: firebaseUser.displayName,
-                            photoURL: firebaseUser.photoURL,
-                            phoneNumber: firebaseUser.phoneNumber,
-                        });
+                        setUser(authUser);
                     }
                     else {
                         console.log('[@iris/auth] Signed out \u2014 no user');
@@ -111,6 +135,16 @@ const AuthProvider = ({ auth: authProp, config, children }) => {
             throw err;
         }
     };
+    const superRoles = config.superRoles ?? roleHelpers_1.DEFAULT_SUPER_ROLES;
+    const refreshUser = async () => {
+        const current = auth.currentUser;
+        if (!current) {
+            setUser(null);
+            return;
+        }
+        const authUser = await toAuthUser(current, /* forceRefresh */ true);
+        setUser(authUser);
+    };
     const value = {
         user,
         loading,
@@ -126,6 +160,9 @@ const AuthProvider = ({ auth: authProp, config, children }) => {
         },
         verifyPhoneCode: (verificationId, code) => handleAuth(() => authService.verifyPhoneCode(verificationId, code)),
         signOut: () => handleAuth(() => authService.signOut()),
+        refreshUser,
+        hasRole: (role) => (0, roleHelpers_1.checkRole)(user, role),
+        hasPermission: (permission) => (0, roleHelpers_1.checkPermission)(user, permission, superRoles),
     };
     return react_1.default.createElement(AuthContext.Provider, { value: value }, children);
 };

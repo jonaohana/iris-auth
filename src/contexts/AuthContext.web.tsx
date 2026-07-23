@@ -1,7 +1,34 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User, Auth } from 'firebase/auth';
 import { AuthService } from '../services/authService.web';
-import { AuthContextValue, AuthUser, AuthConfig } from '../types';
+import { AuthContextValue, AuthUser, AuthConfig, Role, Permission } from '../types';
+import { extractRoleInfo, checkRole, checkPermission, DEFAULT_SUPER_ROLES } from './roleHelpers';
+
+/**
+ * Build an AuthUser from a Firebase user, reading role/permissions from its ID
+ * token custom claims. `forceRefresh` re-fetches the token from the server so
+ * newly-assigned claims are picked up immediately.
+ */
+async function toAuthUser(firebaseUser: User, forceRefresh = false): Promise<AuthUser> {
+  let claims: Record<string, any> = {};
+  try {
+    const tokenResult = await firebaseUser.getIdTokenResult(forceRefresh);
+    claims = (tokenResult.claims as Record<string, any>) || {};
+  } catch (err) {
+    console.error('[@iris/auth] Failed to read ID token claims:', err);
+  }
+  const { role, permissions } = extractRoleInfo(claims);
+  return {
+    uid: firebaseUser.uid,
+    email: firebaseUser.email,
+    displayName: firebaseUser.displayName,
+    photoURL: firebaseUser.photoURL,
+    phoneNumber: firebaseUser.phoneNumber,
+    role,
+    permissions,
+    claims,
+  };
+}
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -33,8 +60,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ auth: authProp, conf
         // Wait a tick to ensure auth is ready
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
+            const authUser = await toAuthUser(firebaseUser);
             // Log everything we know about the authenticated user
             console.log('[@iris/auth] Signed in \u2014 user info:', {
               uid: firebaseUser.uid,
@@ -47,14 +75,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ auth: authProp, conf
               providers: firebaseUser.providerData.map((p) => p.providerId),
               createdAt: firebaseUser.metadata?.creationTime,
               lastSignInAt: firebaseUser.metadata?.lastSignInTime,
+              role: authUser.role,
+              permissions: authUser.permissions,
             });
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-              phoneNumber: firebaseUser.phoneNumber,
-            });
+            setUser(authUser);
           } else {
             console.log('[@iris/auth] Signed out \u2014 no user');
             setUser(null);
@@ -87,6 +111,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ auth: authProp, conf
     }
   };
 
+  const superRoles = config.superRoles ?? DEFAULT_SUPER_ROLES;
+
+  const refreshUser = async () => {
+    const current = auth.currentUser;
+    if (!current) {
+      setUser(null);
+      return;
+    }
+    const authUser = await toAuthUser(current, /* forceRefresh */ true);
+    setUser(authUser);
+  };
+
   const value: AuthContextValue = {
     user,
     loading,
@@ -105,6 +141,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ auth: authProp, conf
     verifyPhoneCode: (verificationId, code) =>
       handleAuth(() => authService.verifyPhoneCode(verificationId, code)),
     signOut: () => handleAuth(() => authService.signOut()),
+    refreshUser,
+    hasRole: (role) => checkRole(user, role),
+    hasPermission: (permission) => checkPermission(user, permission, superRoles),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

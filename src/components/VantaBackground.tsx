@@ -11,6 +11,7 @@ interface Props {
 export const VantaBackground: React.FC<Props> = ({ vanta, children, backgroundImage }) => {
   const containerRef = useRef<any>(null);
   const effectRef = useRef<any>(null);
+  const initRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -31,23 +32,46 @@ export const VantaBackground: React.FC<Props> = ({ vanta, children, backgroundIm
 
     const init = async () => {
       try {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js');
+        // Only load scripts once
+        if (!initRef.current) {
+          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js');
+          initRef.current = true;
+        }
         await loadScript(
           `https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.${vanta.effect}.min.js`
         );
         if (!mounted || !containerRef.current) return;
         const VANTA = (window as any).VANTA;
         const key = vanta.effect.toUpperCase();
-        if (!VANTA?.[key]) return;
-        effectRef.current = VANTA[key]({
-          el: containerRef.current,
-          mouseControls: true,
-          touchControls: true,
-          gyroControls: false,
-          ...vanta.options,
-        });
+        if (!VANTA?.[key]) {
+          console.warn(`[VantaBackground] VANTA.${key} not available`, { available: Object.keys(VANTA || {}) });
+          return;
+        }
+        // Destroy existing effect before creating new one
+        if (effectRef.current) {
+          try {
+            effectRef.current.destroy();
+          } catch (e) {
+            // ignore destruction errors
+          }
+          effectRef.current = null;
+        }
+        // Create new effect
+        if (mounted && containerRef.current) {
+          console.log(`[VantaBackground] Creating effect: ${key}`, { vantaOptions: vanta.options });
+          effectRef.current = VANTA[key]({
+            el: containerRef.current,
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            ...vanta.options,
+          });
+          console.log(`[VantaBackground] Effect created successfully`);
+        }
       } catch (err) {
-        console.error('[VantaBackground]', err);
+        if (mounted) {
+          console.error('[VantaBackground] Error:', err);
+        }
       }
     };
 
@@ -56,11 +80,15 @@ export const VantaBackground: React.FC<Props> = ({ vanta, children, backgroundIm
     return () => {
       mounted = false;
       if (effectRef.current) {
-        effectRef.current.destroy();
+        try {
+          effectRef.current.destroy();
+        } catch (e) {
+          // ignore cleanup errors
+        }
         effectRef.current = null;
       }
     };
-  }, [vanta.effect]);
+  }, [vanta.effect, JSON.stringify(vanta.options)]);
 
   const containerStyle = backgroundImage
     ? [styles.container, { backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } as any]
@@ -85,7 +113,11 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
+        width: '100%',
+        height: '100%',
+        minHeight: '100vh',
         zIndex: 0,
+        overflow: 'hidden',
       } as any,
       default: {},
     }),
