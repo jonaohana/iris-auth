@@ -16,6 +16,10 @@ interface AuthButtonProps {
   loading?: boolean;
   disabled?: boolean;
   icon?: React.ReactNode;
+  /** Shorter button with tighter spacing — for space-constrained layouts. */
+  compact?: boolean;
+  /** Show only the icon (title becomes the accessibility label) — for a row of providers. */
+  iconOnly?: boolean;
 }
 
 export const AuthButton: React.FC<AuthButtonProps> = ({
@@ -25,9 +29,13 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   loading = false,
   disabled = false,
   icon,
+  compact = false,
+  iconOnly = false,
 }) => {
   const buttonStyle = [
     styles.button,
+    compact && styles.buttonCompact,
+    iconOnly && styles.buttonIconOnly,
     provider === 'google' && styles.googleButton,
     provider === 'apple' && styles.appleButton,
     provider === 'facebook' && styles.facebookButton,
@@ -51,6 +59,8 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={title}
     >
       {loading ? (
         <ActivityIndicator
@@ -58,8 +68,8 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
         />
       ) : (
         <View style={styles.buttonContent}>
-          {icon && <View style={styles.iconContainer}>{icon}</View>}
-          <Text style={textStyle}>{title}</Text>
+          {icon && <View style={iconOnly ? undefined : styles.iconContainer}>{icon}</View>}
+          {!iconOnly && <Text style={textStyle}>{title}</Text>}
         </View>
       )}
     </TouchableOpacity>
@@ -80,6 +90,14 @@ const styles = StyleSheet.create({
       } as any,
       default: theme.shadows.small,
     }),
+  },
+  buttonCompact: {
+    height: 42,
+    marginVertical: 4,
+  },
+  buttonIconOnly: {
+    flex: 1,
+    marginHorizontal: 4,
   },
   buttonContent: {
     flexDirection: 'row',

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { User } from 'firebase/auth';
 
 /**
@@ -35,15 +36,37 @@ export interface AuthUser {
 }
 
 export interface AuthConfig {
+  /** Web: unused by the Firebase popup flow; kept for apps that need it elsewhere. */
   googleWebClientId?: string;
+  /**
+   * Native (iOS): the **iOS** OAuth client ID from Google Cloud, created for the
+   * app's bundle identifier. Required for Google Sign-In on iOS.
+   */
   googleIosClientId?: string;
+  /**
+   * Native (Android): the **Android** OAuth client ID from Google Cloud, created
+   * for the app's package name + signing SHA-1. Required for Google Sign-In on Android.
+   */
   googleAndroidClientId?: string;
   appleEnabled?: boolean;
   emailPasswordEnabled?: boolean;
   phoneEnabled?: boolean;
+  /**
+   * Native: the Facebook App ID. Required for Facebook Login on iOS / Android
+   * (the host app must also register the `fb<APP_ID>` URL scheme).
+   */
   facebookAppId?: string;
+  /** Never needed on the client; kept for backwards compatibility. */
   facebookAppSecret?: string;
+  /**
+   * Native: override the OAuth redirect URI for Google. Defaults to
+   * `<bundleId|package>:/oauthredirect`. Prefer `googleRedirectUri`.
+   */
   redirectUri?: string;
+  /** Native: override the Google redirect URI (default `<bundleId|package>:/oauthredirect`). */
+  googleRedirectUri?: string;
+  /** Native: override the Facebook redirect URI (default `fb<facebookAppId>://authorize`). */
+  facebookRedirectUri?: string;
   /**
    * Roles that implicitly satisfy any `hasPermission` check (an "admin bypass").
    * A user whose `role` is in this list passes every permission check without
@@ -180,4 +203,28 @@ export interface LoginScreenProps {
   footerTextColor?: string;
   /** App name to display in welcome message, default "the Hub" */
   appName?: string;
+  /**
+   * Custom full-bleed background (web + native), e.g. a video layer. When set,
+   * the screen container goes transparent, the form sits in a glass card
+   * (modalOpacity applies), and `vanta` / `backgroundImage` are ignored.
+   * Position it yourself (absolute / fixed fill).
+   */
+  background?: ReactNode;
+  /** Rendered directly above the card (e.g. a logo) — used with `background`. */
+  aboveCard?: ReactNode;
+  /**
+   * Native only: content that fills ALL the space above the card (e.g. an animated
+   * hero + live feed). The card drops to the bottom in a compact form (tighter
+   * title, buttons and inputs) so everything fits the screen without scrolling.
+   * Needs `background`. Ignored on web.
+   */
+  fillAboveCard?: ReactNode;
+  /** Space kept free below the compact card (e.g. a floating bottom nav). Default 20. */
+  bottomInset?: number;
+  /** Card background (any CSS color) — overrides the white modalOpacity card. */
+  cardColor?: string;
+  /** Translucent box color (any CSS color, e.g. 'rgba(0,0,0,0.45)') drawn behind title, divider text and links — use with light header/footer text colors on a see-through card. */
+  textBackdropColor?: string;
+  /** Soft dark text-shadow color (e.g. 'rgba(0,0,0,0.65)') on title, divider text and links — a lighter alternative to textBackdropColor. */
+  textShadowColor?: string;
 }

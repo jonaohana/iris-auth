@@ -25,6 +25,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   headerTextColor,
   footerTextColor,
   appName = 'the Hub',
+  background,
+  aboveCard,
+  fillAboveCard,
+  bottomInset,
+  cardColor,
+  textBackdropColor,
+  textShadowColor,
 }) => {
   const { signInWithGoogle, signInWithApple, signInWithFacebook, signInWithEmail, signUpWithEmail, error, loading, user, signOut } =
     useAuth();
@@ -33,6 +40,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [usePhoneAuth, setUsePhoneAuth] = useState(false);
+  // The email/password (and phone) form stays collapsed behind one button so the
+  // social buttons + that button fit without scrolling; tap it to expand.
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
 
   const handleEmailAuth = async () => {
@@ -102,20 +112,41 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
+  // Optional translucent box behind text that sits directly on the card/background (title, "or", links).
+  const textBox: any = textBackdropColor
+    ? { backgroundColor: textBackdropColor, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, overflow: 'hidden' }
+    : null;
+
+  // Optional soft dark glow on text that sits directly on the card/background — lighter-looking than a box.
+  const textGlow: any = textShadowColor
+    ? Platform.OS === 'web'
+      ? { textShadow: `0 1px 2px ${textShadowColor}, 0 0 14px ${textShadowColor}` }
+      : { textShadowColor, textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 }
+    : null;
+
+  // Native + fillAboveCard: the hero takes every pixel above the card and the card goes compact.
+  const compact = Platform.OS !== 'web' && !!fillAboveCard;
+
   const Container = Platform.OS === 'web' ? View : KeyboardAvoidingView;
   const containerProps = Platform.OS === 'web' ? {} : { behavior: 'padding' as const };
 
   const formContent = (
     <View style={[
       styles.content,
-      vanta && Platform.OS === 'web' ? [
+      (vanta || background) && Platform.OS === 'web' ? [
         styles.contentCard,
-        { backgroundColor: `rgba(255,255,255,${modalOpacity})` } as any
-      ] : null
+        { backgroundColor: cardColor ?? `rgba(255,255,255,${modalOpacity})` } as any
+      ] : null,
+      background && Platform.OS !== 'web' ? [
+        styles.contentCardNative,
+        { backgroundColor: cardColor ?? `rgba(255,255,255,${modalOpacity})` },
+        compact && styles.contentCardCompact,
+        compact && bottomInset != null && { marginBottom: bottomInset },
+      ] : null,
     ]}>
-      <View style={styles.header}>
-          <Text style={[styles.title, headerTextColor && { color: headerTextColor } as any]}>Welcome to {appName}</Text>
-          <Text style={[styles.subtitle, headerTextColor && { color: headerTextColor } as any]}>Sign in to continue</Text>
+      <View style={[styles.header, compact && styles.headerCompact, textBox && { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: textBackdropColor } as any]}>
+          <Text style={[styles.title, compact && styles.titleCompact, headerTextColor && { color: headerTextColor } as any, textGlow]}>Welcome to {appName}</Text>
+          <Text style={[styles.subtitle, compact && styles.subtitleCompact, headerTextColor && { color: headerTextColor } as any, textGlow]}>Sign in to continue</Text>
         </View>
 
         {error && (
@@ -124,102 +155,140 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </View>
         )}
 
-        <View style={styles.socialButtons}>
-          <AuthButton
-            provider="google"
-            title="Continue with Google"
-            onPress={handleGoogleSignIn}
-            loading={localLoading && !email}
-            disabled={localLoading}
-            icon={<Text style={styles.googleIcon}>G</Text>}
-          />
-
-          <AuthButton
-            provider="facebook"
-            title="Continue with Facebook"
-            onPress={handleFacebookSignIn}
-            loading={localLoading && !email}
-            disabled={localLoading}
-            icon={<Text style={styles.facebookIcon}>f</Text>}
-          />
-
-          <AuthButton
-            provider="apple"
-            title="Continue with Apple"
-            onPress={handleAppleSignIn}
-            loading={localLoading && !email}
-            disabled={localLoading}
-            icon={<Text style={styles.appleIcon}></Text>}
-          />
-        </View>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <View style={styles.emailForm}>
-          {usePhoneAuth ? (
-            <PhoneLoginInput onSuccess={onLoginSuccess} />
-          ) : (
-            <>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                editable={!localLoading}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password"
-                editable={!localLoading}
+        {/* One or the other: social buttons, or the email / phone form — never both (saves space). */}
+        {!showEmailForm && (
+          <>
+            <View style={[styles.socialButtons, compact && { marginBottom: 0, flexDirection: 'row' }]}>
+              <AuthButton
+                provider="google"
+                compact={compact}
+                iconOnly={compact}
+                title="Continue with Google"
+                onPress={handleGoogleSignIn}
+                loading={localLoading && !email}
+                disabled={localLoading}
+                icon={<Text style={styles.googleIcon}>G</Text>}
               />
 
               <AuthButton
-                provider="email"
-                title={isSignUp ? 'Sign Up' : 'Sign In'}
-                onPress={handleEmailAuth}
-                loading={localLoading && !!email}
-                disabled={!email || !password || localLoading}
+                provider="facebook"
+                compact={compact}
+                iconOnly={compact}
+                title="Continue with Facebook"
+                onPress={handleFacebookSignIn}
+                loading={localLoading && !email}
+                disabled={localLoading}
+                icon={<Text style={styles.facebookIcon}>f</Text>}
               />
 
-              {showSignUp && (
-                <Pressable
-                  onPress={() => setIsSignUp(!isSignUp)}
+              {/* Apple: system sheet on iOS, Firebase popup on web. On Android Apple
+                  needs a web flow with an https return URL (backend) — not wired up. */}
+              {Platform.OS !== 'android' && (
+                <AuthButton
+                  provider="apple"
+                  compact={compact}
+                  iconOnly={compact}
+                  title="Continue with Apple"
+                  onPress={handleAppleSignIn}
+                  loading={localLoading && !email}
                   disabled={localLoading}
-                  style={styles.toggleButton}
-                >
-                  <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any]}>
-                    {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-                  </Text>
-                </Pressable>
+                  // U+F8FF is the Apple logo on Apple platforms (tofu elsewhere).
+                  icon={<Text style={styles.appleIcon}>{Platform.OS === 'ios' ? '\uF8FF' : ''}</Text>}
+                />
               )}
-            </>
-          )}
+            </View>
 
-          <Pressable
-            onPress={() => setUsePhoneAuth(!usePhoneAuth)}
+            <View style={[styles.divider, compact && styles.dividerCompact]}>
+              <View style={styles.dividerLine} />
+              <Text style={[styles.dividerText, textBox, textGlow]}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+          </>
+        )}
+
+        {!showEmailForm ? (
+          <AuthButton
+            provider="email"
+            compact={compact}
+            title="Log in with email / password"
+            onPress={() => setShowEmailForm(true)}
             disabled={localLoading}
-            style={styles.toggleButton}
-          >
-            <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any]}>
-              {usePhoneAuth ? 'Use email instead' : 'Use phone number instead'}
-            </Text>
-          </Pressable>
-        </View>
+            icon={<Text style={styles.emailIcon}>✉</Text>}
+          />
+        ) : (
+          <View style={[styles.emailForm, compact && { marginBottom: 0 }]}>
+            {usePhoneAuth ? (
+              <PhoneLoginInput onSuccess={onLoginSuccess} />
+            ) : (
+              <>
+                <TextInput
+                  style={[styles.input, compact && styles.inputCompact]}
+                  placeholder="Email"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  editable={!localLoading}
+                />
+
+                <TextInput
+                  style={[styles.input, compact && styles.inputCompact]}
+                  placeholder="Password"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password"
+                  editable={!localLoading}
+                />
+
+                <AuthButton
+                  provider="email"
+                  compact={compact}
+                  title={isSignUp ? 'Sign Up' : 'Sign In'}
+                  onPress={handleEmailAuth}
+                  loading={localLoading && !!email}
+                  disabled={!email || !password || localLoading}
+                />
+
+                {showSignUp && (
+                  <Pressable
+                    onPress={() => setIsSignUp(!isSignUp)}
+                    disabled={localLoading}
+                    style={styles.toggleButton}
+                  >
+                    <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any, textBox, textGlow]}>
+                      {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                    </Text>
+                  </Pressable>
+                )}
+              </>
+            )}
+
+            <Pressable
+              onPress={() => setUsePhoneAuth(!usePhoneAuth)}
+              disabled={localLoading}
+              style={styles.toggleButton}
+            >
+              <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any, textBox, textGlow]}>
+                {usePhoneAuth ? 'Use email instead' : 'Use phone number instead'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => { setShowEmailForm(false); setUsePhoneAuth(false); }}
+              disabled={localLoading}
+              style={styles.toggleButton}
+            >
+              <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any, textBox, textGlow]}>
+                Back to all sign-in options
+              </Text>
+            </Pressable>
+          </View>
+        )}
     </View>
   );
 
@@ -229,22 +298,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const loggedInContent = (
     <View style={[
       styles.content,
-      vanta && Platform.OS === 'web' ? [
+      (vanta || background) && Platform.OS === 'web' ? [
         styles.contentCard,
-        { backgroundColor: `rgba(255,255,255,${modalOpacity})` } as any
-      ] : null
+        { backgroundColor: cardColor ?? `rgba(255,255,255,${modalOpacity})` } as any
+      ] : null,
+      background && Platform.OS !== 'web' ? [
+        styles.contentCardNative,
+        { backgroundColor: cardColor ?? `rgba(255,255,255,${modalOpacity})` },
+      ] : null,
     ]}>
-      <View style={styles.header}>
+      <View style={[styles.header, textBox && { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: textBackdropColor } as any]}>
         <View style={styles.onlineBadge}>
           <View style={styles.onlineDot} />
           <Text style={styles.onlineText}>Online</Text>
         </View>
-        <Text style={[styles.title, headerTextColor && { color: headerTextColor } as any]}>You're logged in</Text>
-        <Text style={[styles.subtitle, headerTextColor && { color: headerTextColor } as any]}>
+        <Text style={[styles.title, headerTextColor && { color: headerTextColor } as any, textGlow]}>You're logged in</Text>
+        <Text style={[styles.subtitle, headerTextColor && { color: headerTextColor } as any, textGlow]}>
           Signed in as {signedInLabel}
         </Text>
         {user?.displayName && user?.email ? (
-          <Text style={[styles.subtitle, headerTextColor && { color: headerTextColor } as any]}>{user.email}</Text>
+          <Text style={[styles.subtitle, headerTextColor && { color: headerTextColor } as any, textGlow]}>{user.email}</Text>
         ) : null}
       </View>
 
@@ -263,7 +336,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       />
 
       <Pressable onPress={handleSignOut} disabled={localLoading} style={styles.toggleButton}>
-        <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any]}>
+        <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any, textBox, textGlow]}>
           Not you? Log out to switch accounts
         </Text>
       </Pressable>
@@ -271,6 +344,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   );
 
   const screenContent = user ? loggedInContent : formContent;
+
+  if (background) {
+    return (
+      <Container style={[styles.container, styles.containerCustomBg]} {...containerProps}>
+        {background}
+        {aboveCard}
+        {compact && !user ? <View style={styles.fillSlot}>{fillAboveCard}</View> : null}
+        {screenContent}
+      </Container>
+    );
+  }
 
   if (vanta && Platform.OS === 'web') {
     return <VantaBackground vanta={vanta} backgroundImage={backgroundImage}>{screenContent}</VantaBackground>;
@@ -323,10 +407,37 @@ const styles = StyleSheet.create({
       } as any,
     }),
   },
+  containerCustomBg: {
+    backgroundColor: 'transparent',
+    ...Platform.select({
+      web: { flexDirection: 'column', paddingVertical: 24, paddingHorizontal: 16 } as any,
+      default: { justifyContent: 'center' },
+    }),
+  },
+  contentCardNative: {
+    flex: 0,
+    marginHorizontal: 20,
+    paddingVertical: theme.spacing.xl,
+    borderRadius: 20,
+  },
+  contentCardCompact: {
+    marginHorizontal: 14,
+    marginBottom: 20,
+    paddingVertical: 10,
+  },
+  fillSlot: {
+    flex: 1,
+    minHeight: 0,
+  },
   header: {
     marginBottom: theme.spacing.xl,
     alignItems: 'center',
   },
+  headerCompact: { marginBottom: theme.spacing.sm },
+  titleCompact: { fontSize: 22, lineHeight: 28, marginBottom: 2 },
+  subtitleCompact: { fontSize: 13, lineHeight: 17 },
+  dividerCompact: { marginVertical: 4 },
+  inputCompact: { height: 44, marginBottom: 8 },
   onlineBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -386,6 +497,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#1877F2',
+  },
+  emailIcon: {
+    fontSize: 18,
+    color: theme.colors.textLight,
   },
   appleIcon: {
     fontSize: 20,

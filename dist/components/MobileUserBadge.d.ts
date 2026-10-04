@@ -14,6 +14,11 @@ export interface MobileUserBadgeProps {
     onSignOut?: () => void;
     /** Overrides the built-in popover: pressing the avatar calls this instead */
     onPress?: () => void;
+    /**
+     * Overrides the avatar image. When set, this wins over the auth provider's
+     * photoURL — use it to show the app's own uploaded profile photo.
+     */
+    avatarUrl?: string | null;
     /** Show the little online status dot on the avatar. Default true */
     showStatusDot?: boolean;
     /** Theme colors so the button matches the host app (incl. dark mode) */

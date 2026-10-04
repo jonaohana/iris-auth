@@ -72,7 +72,7 @@ const DEFAULT_COLORS = {
  *   out (pressing it calls this — e.g. navigate to your Login screen). When
  *   omitted, the badge renders nothing while logged out (legacy behaviour).
  */
-const UserBadge = ({ size = 34, showName = true, showChevron = true, onPress, onSignOut, onLogin, loginLabel = 'Log in', colors, style, }) => {
+const UserBadge = ({ size = 34, showName = true, showChevron = true, onPress, onSignOut, onLogin, loginLabel = 'Log in', avatarUrl, colors, style, }) => {
     const { user, signOut } = (0, hooks_1.useAuth)();
     const [menuOpen, setMenuOpen] = (0, react_1.useState)(false);
     const c = { ...DEFAULT_COLORS, ...(colors ?? {}) };
@@ -126,7 +126,7 @@ const UserBadge = ({ size = 34, showName = true, showChevron = true, onPress, on
                 },
             ] },
             react_1.default.createElement(react_native_1.View, { style: [styles.onlineDot, { backgroundColor: c.dot }] }),
-            user.photoURL ? (react_1.default.createElement(react_native_1.Image, { source: { uri: user.photoURL }, style: { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 } })) : (react_1.default.createElement(react_native_1.View, { style: [
+            (avatarUrl ?? user.photoURL) ? (react_1.default.createElement(react_native_1.Image, { source: { uri: (avatarUrl ?? user.photoURL) }, style: { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 } })) : (react_1.default.createElement(react_native_1.View, { style: [
                     styles.avatar,
                     {
                         width: avatarSize,

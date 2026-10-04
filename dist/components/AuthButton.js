@@ -7,9 +7,11 @@ exports.AuthButton = void 0;
 const react_1 = __importDefault(require("react"));
 const react_native_1 = require("react-native");
 const theme_1 = require("../theme");
-const AuthButton = ({ onPress, title, provider, loading = false, disabled = false, icon, }) => {
+const AuthButton = ({ onPress, title, provider, loading = false, disabled = false, icon, compact = false, iconOnly = false, }) => {
     const buttonStyle = [
         styles.button,
+        compact && styles.buttonCompact,
+        iconOnly && styles.buttonIconOnly,
         provider === 'google' && styles.googleButton,
         provider === 'apple' && styles.appleButton,
         provider === 'facebook' && styles.facebookButton,
@@ -25,9 +27,9 @@ const AuthButton = ({ onPress, title, provider, loading = false, disabled = fals
         provider === 'email' && styles.emailText,
         provider === 'phone' && styles.phoneText,
     ];
-    return (react_1.default.createElement(react_native_1.TouchableOpacity, { style: buttonStyle, onPress: onPress, disabled: disabled || loading, activeOpacity: 0.8 }, loading ? (react_1.default.createElement(react_native_1.ActivityIndicator, { color: provider === 'google' ? theme_1.theme.colors.text : theme_1.theme.colors.textLight })) : (react_1.default.createElement(react_native_1.View, { style: styles.buttonContent },
-        icon && react_1.default.createElement(react_native_1.View, { style: styles.iconContainer }, icon),
-        react_1.default.createElement(react_native_1.Text, { style: textStyle }, title)))));
+    return (react_1.default.createElement(react_native_1.TouchableOpacity, { style: buttonStyle, onPress: onPress, disabled: disabled || loading, activeOpacity: 0.8, accessibilityRole: "button", accessibilityLabel: title }, loading ? (react_1.default.createElement(react_native_1.ActivityIndicator, { color: provider === 'google' ? theme_1.theme.colors.text : theme_1.theme.colors.textLight })) : (react_1.default.createElement(react_native_1.View, { style: styles.buttonContent },
+        icon && react_1.default.createElement(react_native_1.View, { style: iconOnly ? undefined : styles.iconContainer }, icon),
+        !iconOnly && react_1.default.createElement(react_native_1.Text, { style: textStyle }, title)))));
 };
 exports.AuthButton = AuthButton;
 const styles = react_native_1.StyleSheet.create({
@@ -44,6 +46,14 @@ const styles = react_native_1.StyleSheet.create({
             },
             default: theme_1.theme.shadows.small,
         }),
+    },
+    buttonCompact: {
+        height: 42,
+        marginVertical: 4,
+    },
+    buttonIconOnly: {
+        flex: 1,
+        marginHorizontal: 4,
     },
     buttonContent: {
         flexDirection: 'row',

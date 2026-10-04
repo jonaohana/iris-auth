@@ -87,7 +87,7 @@ const PersonGlyph = ({ d, color, bg }) => (react_1.default.createElement(react_n
  * user's name + chevron, designed for a top header). Same `colors` palette, so
  * both stay visually consistent across breakpoints.
  */
-const MobileUserBadge = ({ size = 36, onLogin, onSignOut, onPress, showStatusDot = true, colors, style, }) => {
+const MobileUserBadge = ({ size = 36, onLogin, onSignOut, onPress, showStatusDot = true, avatarUrl, colors, style, }) => {
     const { user, signOut } = (0, hooks_1.useAuth)();
     const [menuOpen, setMenuOpen] = (0, react_1.useState)(false);
     const c = { ...DEFAULT_COLORS, ...(colors ?? {}) };
@@ -137,7 +137,7 @@ const MobileUserBadge = ({ size = 36, onLogin, onSignOut, onPress, showStatusDot
                     opacity: hovered || pressed ? 0.85 : 1,
                 },
             ] },
-            user.photoURL ? (react_1.default.createElement(react_native_1.Image, { source: { uri: user.photoURL }, style: { width: size, height: size, borderRadius: size / 2 } })) : (react_1.default.createElement(react_native_1.View, { style: [
+            (avatarUrl ?? user.photoURL) ? (react_1.default.createElement(react_native_1.Image, { source: { uri: (avatarUrl ?? user.photoURL) }, style: { width: size, height: size, borderRadius: size / 2 } })) : (react_1.default.createElement(react_native_1.View, { style: [
                     styles.avatar,
                     {
                         width: size,
