@@ -38,6 +38,7 @@ const react_1 = __importStar(require("react"));
 const auth_1 = require("firebase/auth");
 const authService_native_1 = require("../services/authService.native");
 const roleHelpers_1 = require("./roleHelpers");
+const claims_1 = require("../access/claims");
 /**
  * Build an AuthUser from a Firebase user, reading role/permissions from its ID
  * token custom claims. `forceRefresh` re-fetches the token from the server so
@@ -53,6 +54,7 @@ async function toAuthUser(firebaseUser, forceRefresh = false) {
         console.error('[@iris/auth] Failed to read ID token claims:', err);
     }
     const { role, permissions } = (0, roleHelpers_1.extractRoleInfo)(claims);
+    const { apps, tenants } = (0, claims_1.parseClaims)(claims);
     return {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
@@ -61,9 +63,13 @@ async function toAuthUser(firebaseUser, forceRefresh = false) {
         phoneNumber: firebaseUser.phoneNumber,
         role,
         permissions,
+        apps,
+        tenants,
         claims,
     };
 }
+/** The signed-in user's claims in the shape the access helpers take (null when signed out). */
+const accessOf = (u) => u ? { role: u.role, apps: u.apps, tenants: u.tenants, permissions: u.permissions } : null;
 const AuthContext = (0, react_1.createContext)(undefined);
 const AuthProvider = ({ auth: authProp, config, children }) => {
     // Lazy load default auth only if not provided
@@ -166,6 +172,9 @@ const AuthProvider = ({ auth: authProp, config, children }) => {
         refreshUser,
         hasRole: (role) => (0, roleHelpers_1.checkRole)(user, role),
         hasPermission: (permission) => (0, roleHelpers_1.checkPermission)(user, permission, superRoles),
+        isSuperAdmin: () => (0, claims_1.isSuperAdmin)(accessOf(user)),
+        hasAppRole: (app, min) => (0, claims_1.hasAppRole)(accessOf(user), app, min),
+        hasTenantRole: (app, id, min) => (0, claims_1.hasTenantRole)(accessOf(user), app, id, min),
     };
     return react_1.default.createElement(AuthContext.Provider, { value: value }, children);
 };

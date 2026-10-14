@@ -20,8 +20,11 @@ initializeApp();
 const ROLE_CLAIM = 'role';
 const PERMISSIONS_CLAIM = 'permissions';
 
-/** Roles allowed to assign roles to other users. */
-const ADMIN_ROLES = ['admin'];
+/**
+ * Roles allowed to assign roles to other users. Super admin only: with a bare `admin` here, any admin could make
+ * themselves (or anyone) `superadmin`. Per-app and per-store roles are managed by the `changeAccess` callable.
+ */
+const ADMIN_ROLES = ['superadmin'];
 /** Role stamped on every newly-created user. */
 const DEFAULT_ROLE = 'user';
 

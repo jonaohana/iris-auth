@@ -1,14 +1,23 @@
 import React, { ReactNode } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role } from '../types';
+import type { AppRole, TenantRole } from '../access/claims';
 
 export interface RoleGateProps {
   /** Require the user's role to match this role (or be one of these roles). */
   role?: Role | Role[];
   /** Require this permission (or ALL of these permissions). */
   permission?: Permission | Permission[];
+  /** Super admins only. */
+  superAdmin?: boolean;
+  /** Require admin (or `appRole`) of this app. */
+  app?: string;
+  appRole?: AppRole;
+  /** Require membership of this store / team (`staff` or higher unless `tenantRole` says otherwise). */
+  tenant?: { app: string; id: string };
+  tenantRole?: TenantRole;
   /**
-   * When both `role` and `permission` are given, require BOTH by default.
+   * When more than one of the checks above is given, require BOTH by default.
    * Set `requireAll={false}` to allow access if EITHER check passes.
    */
   requireAll?: boolean;
@@ -36,18 +45,26 @@ export interface RoleGateProps {
 export const RoleGate: React.FC<RoleGateProps> = ({
   role,
   permission,
+  superAdmin,
+  app,
+  appRole,
+  tenant,
+  tenantRole,
   requireAll = true,
   fallback = null,
   loadingFallback = null,
   children,
 }) => {
-  const { loading, hasRole, hasPermission } = useAuth();
+  const { loading, hasRole, hasPermission, isSuperAdmin, hasAppRole, hasTenantRole } = useAuth();
 
   if (loading) return <>{loadingFallback}</>;
 
   const checks: boolean[] = [];
   if (role !== undefined) checks.push(hasRole(role));
   if (permission !== undefined) checks.push(hasPermission(permission));
+  if (superAdmin) checks.push(isSuperAdmin());
+  if (app !== undefined) checks.push(hasAppRole(app, appRole));
+  if (tenant) checks.push(hasTenantRole(tenant.app, tenant.id, tenantRole));
 
   // No constraints given → treat as "any signed-in-aware" gate that passes.
   const allowed =

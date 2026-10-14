@@ -16,6 +16,11 @@
     "./admin": {
       "types": "./dist/admin/index.d.ts",
       "default": "./dist/admin/index.js"
+    },
+    "./access": {
+      "types": "./dist/access/index.d.ts",
+      "react-native": "./src/access/index.ts",
+      "default": "./dist/access/index.js"
     }
   },
   "scripts": {
@@ -23,7 +28,8 @@
     "watch": "tsc --watch",
     "dev": "node watch.js",
     "setup-env": "node scripts/setup-env.js",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "rm -rf .test-build && tsc -p tsconfig.test.json && node --test .test-build/access/*.test.js .test-build/admin/*.test.js"
   },
   "keywords": [
     "react-native",

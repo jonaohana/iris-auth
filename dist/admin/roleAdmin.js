@@ -14,6 +14,7 @@ exports.RoleAdmin = exports.PERMISSIONS_CLAIM = exports.ROLE_CLAIM = void 0;
  * project that uses this (e.g. your Cloud Functions package).
  */
 const auth_1 = require("firebase-admin/auth");
+const access_1 = require("../access");
 /** Custom-claim key holding the user's primary role. */
 exports.ROLE_CLAIM = 'role';
 /** Custom-claim key holding the user's granular permissions array. */
@@ -28,9 +29,12 @@ exports.PERMISSIONS_CLAIM = 'permissions';
  * `useAuth()` (or sign out / back in). Existing tokens stay valid up to ~1 hour.
  */
 class RoleAdmin {
-    /** @param app Optional firebase-admin App. Defaults to the initialized default app. */
-    constructor(app) {
-        this.auth = (0, auth_1.getAuth)(app);
+    /**
+     * @param app  Optional firebase-admin App. Defaults to the initialized default app.
+     * @param auth Optional Auth instance to use instead (tests pass a fake).
+     */
+    constructor(app, auth) {
+        this.auth = auth ?? (0, auth_1.getAuth)(app);
     }
     /** All custom claims currently on the user (never null). */
     async getClaims(uid) {
@@ -96,6 +100,25 @@ class RoleAdmin {
             claims[exports.PERMISSIONS_CLAIM] = Array.from(new Set(grant.permissions));
         }
         await this.auth.setCustomUserClaims(uid, claims);
+    }
+    /** The uid for an email address (throws if there is no such user). */
+    async uidForEmail(email) {
+        return (await this.auth.getUserByEmail(email)).uid;
+    }
+    /**
+     * Apply a tier change (platform role, app roles, store / team roles) to a user. This does NOT decide whether the
+     * caller is allowed to: run `authorizeChange` first (the callable from `makeChangeAccessCallable` does).
+     * When the change takes access away, the user's refresh tokens are revoked so it takes effect at once,
+     * not after their current token expires.
+     */
+    async applyAccessChange(uid, change) {
+        const existing = await this.getClaims(uid);
+        const next = (0, access_1.applyChange)(existing, change);
+        await this.auth.setCustomUserClaims(uid, next);
+        const revoked = (0, access_1.reducesAccess)((0, access_1.parseClaims)(existing), (0, access_1.parseClaims)(next));
+        if (revoked)
+            await this.auth.revokeRefreshTokens(uid);
+        return { claims: next, revoked };
     }
     /** Remove all role/permission claims (leaves any unrelated claims intact). */
     async clear(uid) {

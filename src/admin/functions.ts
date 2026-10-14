@@ -7,6 +7,7 @@
  * Works with both 1st-gen and 2nd-gen callable signatures (see ROLES.md).
  */
 import { RoleAdmin, RoleGrant } from './roleAdmin';
+import { AccessChange, AccessError, authorizeChange, parseClaims, validateChange } from '../access';
 
 /** A minimal shape of the auth info Cloud Functions attaches to a callable. */
 export interface CallableAuthLike {
@@ -50,7 +51,7 @@ export interface SetRoleData {
 }
 
 export interface SetRoleCallableOptions {
-  /** Roles allowed to assign roles to others. Default `['admin']`. */
+  /** Roles allowed to assign platform roles to others. Default `['superadmin']` (a bare admin could otherwise mint super admins). */
   adminRoles?: string[];
   /** Provide a RoleAdmin instance; defaults to `new RoleAdmin()` (default app). */
   roleAdmin?: RoleAdmin;
@@ -71,7 +72,7 @@ export interface SetRoleCallableOptions {
  *       ? { uid: context.auth.uid, token: context.auth.token } : undefined ));
  */
 export function makeSetRoleCallable(options: SetRoleCallableOptions = {}) {
-  const adminRoles = options.adminRoles ?? ['admin'];
+  const adminRoles = options.adminRoles ?? ['superadmin'];
   const admin = options.roleAdmin ?? new RoleAdmin();
 
   return async (
@@ -96,6 +97,47 @@ export function makeSetRoleCallable(options: SetRoleCallableOptions = {}) {
     if (data.permissions !== undefined) grant.permissions = data.permissions;
     await admin.grant(uid as string, grant);
     return { uid: uid as string, role: grant.role, permissions: grant.permissions };
+  };
+}
+
+export interface ChangeAccessData extends AccessChange {
+  uid?: string;
+  email?: string;
+}
+
+/**
+ * Build the body of the callable that manages tiers: platform roles, per-app roles and store / team roles.
+ * Who may change what is decided by `authorizeChange` (super admin: everything; app admin: stores of their app;
+ * store owner: managers and staff of their own store). The caller's access is read from Firebase right now, not
+ * from their ID token, so a demoted admin cannot keep granting access until the token expires.
+ *
+ *   export const changeAccess = onCall(async (req) =>
+ *     makeChangeAccessCallable()(req.data, req.auth ? { uid: req.auth.uid, token: req.auth.token } : undefined));
+ */
+export function makeChangeAccessCallable(options: { roleAdmin?: RoleAdmin } = {}) {
+  const admin = options.roleAdmin ?? new RoleAdmin();
+  return async (data: ChangeAccessData, auth: CallableAuthLike | undefined | null) => {
+    assertAuthenticated(auth);
+    if (!data || (!data.uid && !data.email)) throw new RoleAuthError('Provide a `uid` or `email` to target.', 'invalid-argument');
+    const { uid: _u, email: _e, ...change } = data;
+    const malformed = validateChange(change);
+    if (malformed) throw new RoleAuthError(malformed, 'invalid-argument'); // a bad request is not a permissions problem
+    try {
+      const targetUid = data.uid ?? (await admin.uidForEmail(data.email as string));
+      const [callerRaw, targetRaw] = await Promise.all([admin.getClaims(auth.uid), admin.getClaims(targetUid)]);
+      const decision = authorizeChange(
+        { uid: auth.uid, claims: parseClaims(callerRaw) },
+        { uid: targetUid, claims: parseClaims(targetRaw) },
+        change,
+      );
+      if (!decision.ok) throw new RoleAuthError(decision.reason, 'permission-denied');
+      const { claims, revoked } = await admin.applyAccessChange(targetUid, change);
+      const out = parseClaims(claims);
+      return { uid: targetUid, role: out.role, apps: out.apps, tenants: out.tenants, sessionsRevoked: revoked };
+    } catch (err) {
+      if (err instanceof AccessError) throw new RoleAuthError(err.message, 'invalid-argument');
+      throw err;
+    }
   };
 }
 

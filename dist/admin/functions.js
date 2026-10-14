@@ -4,6 +4,7 @@ exports.RoleAuthError = void 0;
 exports.assertAuthenticated = assertAuthenticated;
 exports.assertRole = assertRole;
 exports.makeSetRoleCallable = makeSetRoleCallable;
+exports.makeChangeAccessCallable = makeChangeAccessCallable;
 exports.makeAssignDefaultRoleTrigger = makeAssignDefaultRoleTrigger;
 /**
  * SERVER-ONLY. Framework-light helpers for wiring role management into Firebase
@@ -14,6 +15,7 @@ exports.makeAssignDefaultRoleTrigger = makeAssignDefaultRoleTrigger;
  * Works with both 1st-gen and 2nd-gen callable signatures (see ROLES.md).
  */
 const roleAdmin_1 = require("./roleAdmin");
+const access_1 = require("../access");
 /** Thrown when an authorization check fails. Map this to an HttpsError in your handler. */
 class RoleAuthError extends Error {
     constructor(message, code = 'permission-denied') {
@@ -53,7 +55,7 @@ function assertRole(auth, roles) {
  *       ? { uid: context.auth.uid, token: context.auth.token } : undefined ));
  */
 function makeSetRoleCallable(options = {}) {
-    const adminRoles = options.adminRoles ?? ['admin'];
+    const adminRoles = options.adminRoles ?? ['superadmin'];
     const admin = options.roleAdmin ?? new roleAdmin_1.RoleAdmin();
     return async (data, auth) => {
         assertRole(auth, adminRoles);
@@ -74,6 +76,42 @@ function makeSetRoleCallable(options = {}) {
             grant.permissions = data.permissions;
         await admin.grant(uid, grant);
         return { uid: uid, role: grant.role, permissions: grant.permissions };
+    };
+}
+/**
+ * Build the body of the callable that manages tiers: platform roles, per-app roles and store / team roles.
+ * Who may change what is decided by `authorizeChange` (super admin: everything; app admin: stores of their app;
+ * store owner: managers and staff of their own store). The caller's access is read from Firebase right now, not
+ * from their ID token, so a demoted admin cannot keep granting access until the token expires.
+ *
+ *   export const changeAccess = onCall(async (req) =>
+ *     makeChangeAccessCallable()(req.data, req.auth ? { uid: req.auth.uid, token: req.auth.token } : undefined));
+ */
+function makeChangeAccessCallable(options = {}) {
+    const admin = options.roleAdmin ?? new roleAdmin_1.RoleAdmin();
+    return async (data, auth) => {
+        assertAuthenticated(auth);
+        if (!data || (!data.uid && !data.email))
+            throw new RoleAuthError('Provide a `uid` or `email` to target.', 'invalid-argument');
+        const { uid: _u, email: _e, ...change } = data;
+        const malformed = (0, access_1.validateChange)(change);
+        if (malformed)
+            throw new RoleAuthError(malformed, 'invalid-argument'); // a bad request is not a permissions problem
+        try {
+            const targetUid = data.uid ?? (await admin.uidForEmail(data.email));
+            const [callerRaw, targetRaw] = await Promise.all([admin.getClaims(auth.uid), admin.getClaims(targetUid)]);
+            const decision = (0, access_1.authorizeChange)({ uid: auth.uid, claims: (0, access_1.parseClaims)(callerRaw) }, { uid: targetUid, claims: (0, access_1.parseClaims)(targetRaw) }, change);
+            if (!decision.ok)
+                throw new RoleAuthError(decision.reason, 'permission-denied');
+            const { claims, revoked } = await admin.applyAccessChange(targetUid, change);
+            const out = (0, access_1.parseClaims)(claims);
+            return { uid: targetUid, role: out.role, apps: out.apps, tenants: out.tenants, sessionsRevoked: revoked };
+        }
+        catch (err) {
+            if (err instanceof access_1.AccessError)
+                throw new RoleAuthError(err.message, 'invalid-argument');
+            throw err;
+        }
     };
 }
 /**

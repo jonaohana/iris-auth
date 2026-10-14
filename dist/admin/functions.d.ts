@@ -7,6 +7,7 @@
  * Works with both 1st-gen and 2nd-gen callable signatures (see ROLES.md).
  */
 import { RoleAdmin } from './roleAdmin';
+import { AccessChange } from '../access';
 /** A minimal shape of the auth info Cloud Functions attaches to a callable. */
 export interface CallableAuthLike {
     uid: string;
@@ -28,7 +29,7 @@ export interface SetRoleData {
     permissions?: string[];
 }
 export interface SetRoleCallableOptions {
-    /** Roles allowed to assign roles to others. Default `['admin']`. */
+    /** Roles allowed to assign platform roles to others. Default `['superadmin']` (a bare admin could otherwise mint super admins). */
     adminRoles?: string[];
     /** Provide a RoleAdmin instance; defaults to `new RoleAdmin()` (default app). */
     roleAdmin?: RoleAdmin;
@@ -51,6 +52,28 @@ export declare function makeSetRoleCallable(options?: SetRoleCallableOptions): (
     uid: string;
     role?: string | null;
     permissions?: string[];
+}>;
+export interface ChangeAccessData extends AccessChange {
+    uid?: string;
+    email?: string;
+}
+/**
+ * Build the body of the callable that manages tiers: platform roles, per-app roles and store / team roles.
+ * Who may change what is decided by `authorizeChange` (super admin: everything; app admin: stores of their app;
+ * store owner: managers and staff of their own store). The caller's access is read from Firebase right now, not
+ * from their ID token, so a demoted admin cannot keep granting access until the token expires.
+ *
+ *   export const changeAccess = onCall(async (req) =>
+ *     makeChangeAccessCallable()(req.data, req.auth ? { uid: req.auth.uid, token: req.auth.token } : undefined));
+ */
+export declare function makeChangeAccessCallable(options?: {
+    roleAdmin?: RoleAdmin;
+}): (data: ChangeAccessData, auth: CallableAuthLike | undefined | null) => Promise<{
+    uid: string;
+    role: string;
+    apps: Record<string, "staff" | "admin">;
+    tenants: Record<string, "staff" | "manager" | "owner">;
+    sessionsRevoked: boolean;
 }>;
 export interface AssignDefaultRoleOptions {
     /** Role assigned to every new user. Default `'user'`. */

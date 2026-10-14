@@ -1,5 +1,6 @@
 import { useAuth } from '../contexts/AuthContext';
 import { Permission, Role } from '../types';
+import type { AppRole, TenantRole } from '../access/claims';
 
 /**
  * Returns whether the current user has the given role (string) or one of the
@@ -34,4 +35,19 @@ export function useRole(): Role | null {
 /** Returns the current user's granular permissions (empty array when none). */
 export function usePermissions(): Permission[] {
   return useAuth().user?.permissions ?? [];
+}
+
+/** True for a super admin (`role: 'superadmin'`). */
+export function useIsSuperAdmin(): boolean {
+  return useAuth().isSuperAdmin();
+}
+
+/** True for a super admin, or an admin (or `min` and above) of `app`. Scoped per app: admin of one app is not admin of another. */
+export function useHasAppRole(app: string, min?: AppRole): boolean {
+  return useAuth().hasAppRole(app, min);
+}
+
+/** True for a super admin, or a member of that store / team at `min` (default `staff`) or higher. */
+export function useHasTenantRole(app: string, id: string, min?: TenantRole): boolean {
+  return useAuth().hasTenantRole(app, id, min);
 }

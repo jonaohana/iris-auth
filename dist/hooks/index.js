@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.usePermissions = exports.useRole = exports.useHasPermission = exports.useHasRole = exports.useAuth = void 0;
+exports.useHasTenantRole = exports.useHasAppRole = exports.useIsSuperAdmin = exports.usePermissions = exports.useRole = exports.useHasPermission = exports.useHasRole = exports.useAuth = void 0;
 var AuthContext_1 = require("../contexts/AuthContext");
 Object.defineProperty(exports, "useAuth", { enumerable: true, get: function () { return AuthContext_1.useAuth; } });
 var useRoles_1 = require("./useRoles");
@@ -8,3 +8,6 @@ Object.defineProperty(exports, "useHasRole", { enumerable: true, get: function (
 Object.defineProperty(exports, "useHasPermission", { enumerable: true, get: function () { return useRoles_1.useHasPermission; } });
 Object.defineProperty(exports, "useRole", { enumerable: true, get: function () { return useRoles_1.useRole; } });
 Object.defineProperty(exports, "usePermissions", { enumerable: true, get: function () { return useRoles_1.usePermissions; } });
+Object.defineProperty(exports, "useIsSuperAdmin", { enumerable: true, get: function () { return useRoles_1.useIsSuperAdmin; } });
+Object.defineProperty(exports, "useHasAppRole", { enumerable: true, get: function () { return useRoles_1.useHasAppRole; } });
+Object.defineProperty(exports, "useHasTenantRole", { enumerable: true, get: function () { return useRoles_1.useHasTenantRole; } });

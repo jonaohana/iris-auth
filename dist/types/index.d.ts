@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { AppRole, TenantRole } from '../access/claims';
 /**
  * A user's role. Kept as a `string` (not a hard union) so consuming apps can
  * define their own role sets. The common values are suggested for convenience,
@@ -24,6 +25,10 @@ export interface AuthUser {
      * enough (see `hasPermission`).
      */
     permissions: Permission[];
+    /** Per-app roles from the `apps` claim, e.g. `{ ganjahub: 'admin' }`. Empty when none. */
+    apps: Record<string, AppRole>;
+    /** Store / team roles from the `tenants` claim, keyed `<app>/<id>`. Empty when none. */
+    tenants: Record<string, TenantRole>;
     /**
      * The full, raw custom-claims object from the ID token. Use this to read any
      * bespoke claim your backend sets beyond `role`/`permissions`.
@@ -100,6 +105,12 @@ export interface AuthContextValue {
      * (default `['admin']`) pass automatically.
      */
     hasPermission: (permission: Permission | Permission[]) => boolean;
+    /** True for `role: 'superadmin'`. */
+    isSuperAdmin: () => boolean;
+    /** True for a super admin, or when the user holds `min` (default `admin`) or higher on `app`. */
+    hasAppRole: (app: string, min?: AppRole) => boolean;
+    /** True for a super admin, or when the user holds `min` (default `staff`) or higher on that store / team. */
+    hasTenantRole: (app: string, id: string, min?: TenantRole) => boolean;
 }
 export type AuthProviderId = 'google' | 'apple' | 'facebook' | 'email' | 'phone';
 /** @deprecated Use {@link AuthProviderId}; kept for backwards compatibility. */

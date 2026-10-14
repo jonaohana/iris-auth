@@ -13,11 +13,13 @@ export {
   assertAuthenticated,
   assertRole,
   makeSetRoleCallable,
+  makeChangeAccessCallable,
   makeAssignDefaultRoleTrigger,
 } from './functions';
 export type {
   CallableAuthLike,
   SetRoleData,
+  ChangeAccessData,
   SetRoleCallableOptions,
   AssignDefaultRoleOptions,
 } from './functions';

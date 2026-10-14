@@ -8,6 +8,6 @@
  */
 export { RoleAdmin, ROLE_CLAIM, PERMISSIONS_CLAIM } from './roleAdmin';
 export type { RoleGrant } from './roleAdmin';
-export { RoleAuthError, assertAuthenticated, assertRole, makeSetRoleCallable, makeAssignDefaultRoleTrigger, } from './functions';
-export type { CallableAuthLike, SetRoleData, SetRoleCallableOptions, AssignDefaultRoleOptions, } from './functions';
+export { RoleAuthError, assertAuthenticated, assertRole, makeSetRoleCallable, makeChangeAccessCallable, makeAssignDefaultRoleTrigger, } from './functions';
+export type { CallableAuthLike, SetRoleData, ChangeAccessData, SetRoleCallableOptions, AssignDefaultRoleOptions, } from './functions';
 //# sourceMappingURL=index.d.ts.map

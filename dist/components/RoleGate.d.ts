@@ -1,12 +1,24 @@
 import React, { ReactNode } from 'react';
 import { Permission, Role } from '../types';
+import type { AppRole, TenantRole } from '../access/claims';
 export interface RoleGateProps {
     /** Require the user's role to match this role (or be one of these roles). */
     role?: Role | Role[];
     /** Require this permission (or ALL of these permissions). */
     permission?: Permission | Permission[];
+    /** Super admins only. */
+    superAdmin?: boolean;
+    /** Require admin (or `appRole`) of this app. */
+    app?: string;
+    appRole?: AppRole;
+    /** Require membership of this store / team (`staff` or higher unless `tenantRole` says otherwise). */
+    tenant?: {
+        app: string;
+        id: string;
+    };
+    tenantRole?: TenantRole;
     /**
-     * When both `role` and `permission` are given, require BOTH by default.
+     * When more than one of the checks above is given, require BOTH by default.
      * Set `requireAll={false}` to allow access if EITHER check passes.
      */
     requireAll?: boolean;

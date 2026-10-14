@@ -30,3 +30,6 @@ _to_delete*
 *.pem
 *.key
 *.tsbuildinfo
+
+# compiled tests
+.test-build/

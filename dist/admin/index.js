@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeAssignDefaultRoleTrigger = exports.makeSetRoleCallable = exports.assertRole = exports.assertAuthenticated = exports.RoleAuthError = exports.PERMISSIONS_CLAIM = exports.ROLE_CLAIM = exports.RoleAdmin = void 0;
+exports.makeAssignDefaultRoleTrigger = exports.makeChangeAccessCallable = exports.makeSetRoleCallable = exports.assertRole = exports.assertAuthenticated = exports.RoleAuthError = exports.PERMISSIONS_CLAIM = exports.ROLE_CLAIM = exports.RoleAdmin = void 0;
 /**
  * `@iris/auth/admin` — SERVER-ONLY role management.
  *
@@ -18,4 +18,5 @@ Object.defineProperty(exports, "RoleAuthError", { enumerable: true, get: functio
 Object.defineProperty(exports, "assertAuthenticated", { enumerable: true, get: function () { return functions_1.assertAuthenticated; } });
 Object.defineProperty(exports, "assertRole", { enumerable: true, get: function () { return functions_1.assertRole; } });
 Object.defineProperty(exports, "makeSetRoleCallable", { enumerable: true, get: function () { return functions_1.makeSetRoleCallable; } });
+Object.defineProperty(exports, "makeChangeAccessCallable", { enumerable: true, get: function () { return functions_1.makeChangeAccessCallable; } });
 Object.defineProperty(exports, "makeAssignDefaultRoleTrigger", { enumerable: true, get: function () { return functions_1.makeAssignDefaultRoleTrigger; } });

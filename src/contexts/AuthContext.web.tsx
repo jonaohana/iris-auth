@@ -3,6 +3,7 @@ import { onAuthStateChanged, User, Auth } from 'firebase/auth';
 import { AuthService } from '../services/authService.web';
 import { AuthContextValue, AuthUser, AuthConfig, Role, Permission } from '../types';
 import { extractRoleInfo, checkRole, checkPermission, DEFAULT_SUPER_ROLES } from './roleHelpers';
+import { AccessClaims, parseClaims, isSuperAdmin, hasAppRole, hasTenantRole } from '../access/claims';
 
 /**
  * Build an AuthUser from a Firebase user, reading role/permissions from its ID
@@ -18,6 +19,7 @@ async function toAuthUser(firebaseUser: User, forceRefresh = false): Promise<Aut
     console.error('[@iris/auth] Failed to read ID token claims:', err);
   }
   const { role, permissions } = extractRoleInfo(claims);
+  const { apps, tenants } = parseClaims(claims);
   return {
     uid: firebaseUser.uid,
     email: firebaseUser.email,
@@ -26,9 +28,15 @@ async function toAuthUser(firebaseUser: User, forceRefresh = false): Promise<Aut
     phoneNumber: firebaseUser.phoneNumber,
     role,
     permissions,
+    apps,
+    tenants,
     claims,
   };
 }
+
+/** The signed-in user's claims in the shape the access helpers take (null when signed out). */
+const accessOf = (u: AuthUser | null): AccessClaims | null =>
+  u ? { role: u.role, apps: u.apps, tenants: u.tenants, permissions: u.permissions } : null;
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -144,6 +152,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ auth: authProp, conf
     refreshUser,
     hasRole: (role) => checkRole(user, role),
     hasPermission: (permission) => checkPermission(user, permission, superRoles),
+    isSuperAdmin: () => isSuperAdmin(accessOf(user)),
+    hasAppRole: (app, min) => hasAppRole(accessOf(user), app, min),
+    hasTenantRole: (app, id, min) => hasTenantRole(accessOf(user), app, id, min),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

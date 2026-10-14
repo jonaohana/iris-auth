@@ -12,6 +12,7 @@
  */
 import { getAuth, type Auth as AdminAuth } from 'firebase-admin/auth';
 import type { App } from 'firebase-admin/app';
+import { AccessChange, applyChange, parseClaims, reducesAccess } from '../access';
 
 /** Custom-claim key holding the user's primary role. */
 export const ROLE_CLAIM = 'role';
@@ -35,9 +36,12 @@ export interface RoleGrant {
 export class RoleAdmin {
   private auth: AdminAuth;
 
-  /** @param app Optional firebase-admin App. Defaults to the initialized default app. */
-  constructor(app?: App) {
-    this.auth = getAuth(app);
+  /**
+   * @param app  Optional firebase-admin App. Defaults to the initialized default app.
+   * @param auth Optional Auth instance to use instead (tests pass a fake).
+   */
+  constructor(app?: App, auth?: AdminAuth) {
+    this.auth = auth ?? getAuth(app);
   }
 
   /** All custom claims currently on the user (never null). */
@@ -110,6 +114,26 @@ export class RoleAdmin {
       claims[PERMISSIONS_CLAIM] = Array.from(new Set(grant.permissions));
     }
     await this.auth.setCustomUserClaims(uid, claims);
+  }
+
+  /** The uid for an email address (throws if there is no such user). */
+  async uidForEmail(email: string): Promise<string> {
+    return (await this.auth.getUserByEmail(email)).uid;
+  }
+
+  /**
+   * Apply a tier change (platform role, app roles, store / team roles) to a user. This does NOT decide whether the
+   * caller is allowed to: run `authorizeChange` first (the callable from `makeChangeAccessCallable` does).
+   * When the change takes access away, the user's refresh tokens are revoked so it takes effect at once,
+   * not after their current token expires.
+   */
+  async applyAccessChange(uid: string, change: AccessChange): Promise<{ claims: Record<string, any>; revoked: boolean }> {
+    const existing = await this.getClaims(uid);
+    const next = applyChange(existing, change);
+    await this.auth.setCustomUserClaims(uid, next);
+    const revoked = reducesAccess(parseClaims(existing), parseClaims(next));
+    if (revoked) await this.auth.revokeRefreshTokens(uid);
+    return { claims: next, revoked };
   }
 
   /** Remove all role/permission claims (leaves any unrelated claims intact). */

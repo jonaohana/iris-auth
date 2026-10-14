@@ -4,6 +4,9 @@ exports.useHasRole = useHasRole;
 exports.useHasPermission = useHasPermission;
 exports.useRole = useRole;
 exports.usePermissions = usePermissions;
+exports.useIsSuperAdmin = useIsSuperAdmin;
+exports.useHasAppRole = useHasAppRole;
+exports.useHasTenantRole = useHasTenantRole;
 const AuthContext_1 = require("../contexts/AuthContext");
 /**
  * Returns whether the current user has the given role (string) or one of the
@@ -35,4 +38,16 @@ function useRole() {
 /** Returns the current user's granular permissions (empty array when none). */
 function usePermissions() {
     return (0, AuthContext_1.useAuth)().user?.permissions ?? [];
+}
+/** True for a super admin (`role: 'superadmin'`). */
+function useIsSuperAdmin() {
+    return (0, AuthContext_1.useAuth)().isSuperAdmin();
+}
+/** True for a super admin, or an admin (or `min` and above) of `app`. Scoped per app: admin of one app is not admin of another. */
+function useHasAppRole(app, min) {
+    return (0, AuthContext_1.useAuth)().hasAppRole(app, min);
+}
+/** True for a super admin, or a member of that store / team at `min` (default `staff`) or higher. */
+function useHasTenantRole(app, id, min) {
+    return (0, AuthContext_1.useAuth)().hasTenantRole(app, id, min);
 }

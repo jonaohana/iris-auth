@@ -235,6 +235,53 @@ Then have that user call `refreshUser()` (or sign out and back in).
 
 ---
 
+## Access tiers: super admin, app admin, store roles
+
+On top of the single `role` claim, claims carry app- and store-scoped grants. One Firebase project serves every
+iris app, so grants are scoped per app.
+
+```jsonc
+{
+  "role": "superadmin",                        // platform-wide; legacy "admin" still means admin everywhere
+  "apps": { "ganjahub": "admin" },             // app level: "staff" | "admin"
+  "tenants": { "ganjahub/store_42": "owner" }  // store level: "staff" | "manager" | "owner"
+}
+```
+
+| Who | Can do |
+|---|---|
+| Super admin | Everything: platform roles, app roles, any store role, other super admins (not their own demotion) |
+| App admin | Manage store roles within their own app |
+| Store owner | Add/change/remove manager + staff of their own store (cannot mint or change owners) |
+| Manager / staff | Access their own store only |
+
+An app admin is not an implicit store member; apps decide whether to allow that.
+
+**Client:** `useIsSuperAdmin()`, `useHasAppRole(app, role)`, `useHasTenantRole(app, tenantId, role)`, and
+`<RoleGate superAdmin | app appRole | tenant tenantRole>`.
+
+**Backend (Express):** `makeGuards()` from `@iris/auth/access` gives `requireSuperAdmin`, `requireApp`,
+`requireTenant`, `requireTenantOrAppAdmin`. Derive the store from the verified claim, never from the request body.
+
+**Changing access:** the `changeAccess` callable (`makeChangeAccessCallable`) checks the caller's *current* claims
+from Firebase (not their possibly stale token) and revokes the target's refresh tokens whenever access is reduced.
+`setRole` is now super-admin-only so an admin cannot mint super admins.
+
+**Bootstrap the first super admin** (service-account key required, never commit it):
+
+```bash
+node scripts/set-role.js --key ./service-account.json --email you@example.com --role superadmin
+node scripts/set-role.js --key ./sa.json --email a@x.com --apps ganjahub=admin
+node scripts/set-role.js --key ./sa.json --email b@x.com --tenants ganjahub/store_42=owner
+node scripts/set-role.js --key ./sa.json --email b@x.com --revoke
+```
+
+**Limits:** Firebase caps custom claims at 1000 bytes (about 10-15 stores per user); oversize changes are rejected.
+Tokens refresh within ~1 hour, so a reduced grant is only enforced immediately where backends verify with
+`checkRevoked` or the user signs in again. Tests: `npm test`.
+
+---
+
 ## Enforcing roles in security rules
 
 Claims are available in rules as `request.auth.token.<claim>`.

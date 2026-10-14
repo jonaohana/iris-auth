@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_SUPER_ROLES = exports.extractRoleInfo = exports.checkPermission = exports.checkRole = exports.usePermissions = exports.useRole = exports.useHasPermission = exports.useHasRole = exports.RoleGate = exports.theme = exports.VantaBackground = exports.PhoneLoginInput = exports.MobileUserBadge = exports.UserBadge = exports.HelloBearButton = exports.AuthButton = exports.LoginScreen = exports.useAuth = exports.AuthProvider = void 0;
+exports.DEFAULT_SUPER_ROLES = exports.extractRoleInfo = exports.checkPermission = exports.checkRole = exports.useHasTenantRole = exports.useHasAppRole = exports.useIsSuperAdmin = exports.usePermissions = exports.useRole = exports.useHasPermission = exports.useHasRole = exports.RoleGate = exports.theme = exports.VantaBackground = exports.PhoneLoginInput = exports.MobileUserBadge = exports.UserBadge = exports.HelloBearButton = exports.AuthButton = exports.LoginScreen = exports.useAuth = exports.AuthProvider = void 0;
 // Components
 var AuthContext_1 = require("./contexts/AuthContext");
 Object.defineProperty(exports, "AuthProvider", { enumerable: true, get: function () { return AuthContext_1.AuthProvider; } });
@@ -43,10 +43,15 @@ Object.defineProperty(exports, "useHasRole", { enumerable: true, get: function (
 Object.defineProperty(exports, "useHasPermission", { enumerable: true, get: function () { return useRoles_1.useHasPermission; } });
 Object.defineProperty(exports, "useRole", { enumerable: true, get: function () { return useRoles_1.useRole; } });
 Object.defineProperty(exports, "usePermissions", { enumerable: true, get: function () { return useRoles_1.usePermissions; } });
+Object.defineProperty(exports, "useIsSuperAdmin", { enumerable: true, get: function () { return useRoles_1.useIsSuperAdmin; } });
+Object.defineProperty(exports, "useHasAppRole", { enumerable: true, get: function () { return useRoles_1.useHasAppRole; } });
+Object.defineProperty(exports, "useHasTenantRole", { enumerable: true, get: function () { return useRoles_1.useHasTenantRole; } });
 var roleHelpers_1 = require("./contexts/roleHelpers");
 Object.defineProperty(exports, "checkRole", { enumerable: true, get: function () { return roleHelpers_1.checkRole; } });
 Object.defineProperty(exports, "checkPermission", { enumerable: true, get: function () { return roleHelpers_1.checkPermission; } });
 Object.defineProperty(exports, "extractRoleInfo", { enumerable: true, get: function () { return roleHelpers_1.extractRoleInfo; } });
 Object.defineProperty(exports, "DEFAULT_SUPER_ROLES", { enumerable: true, get: function () { return roleHelpers_1.DEFAULT_SUPER_ROLES; } });
+// Access tiers: super admin / per-app admin / per-store roles (pure; also importable as '@iris/auth/access')
+__exportStar(require("./access"), exports);
 // Re-export all types from types file
 __exportStar(require("./types"), exports);

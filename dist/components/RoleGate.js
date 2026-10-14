@@ -20,8 +20,8 @@ const AuthContext_1 = require("../contexts/AuthContext");
  *   <BillingSettings />
  * </RoleGate>
  */
-const RoleGate = ({ role, permission, requireAll = true, fallback = null, loadingFallback = null, children, }) => {
-    const { loading, hasRole, hasPermission } = (0, AuthContext_1.useAuth)();
+const RoleGate = ({ role, permission, superAdmin, app, appRole, tenant, tenantRole, requireAll = true, fallback = null, loadingFallback = null, children, }) => {
+    const { loading, hasRole, hasPermission, isSuperAdmin, hasAppRole, hasTenantRole } = (0, AuthContext_1.useAuth)();
     if (loading)
         return react_1.default.createElement(react_1.default.Fragment, null, loadingFallback);
     const checks = [];
@@ -29,6 +29,12 @@ const RoleGate = ({ role, permission, requireAll = true, fallback = null, loadin
         checks.push(hasRole(role));
     if (permission !== undefined)
         checks.push(hasPermission(permission));
+    if (superAdmin)
+        checks.push(isSuperAdmin());
+    if (app !== undefined)
+        checks.push(hasAppRole(app, appRole));
+    if (tenant)
+        checks.push(hasTenantRole(tenant.app, tenant.id, tenantRole));
     // No constraints given → treat as "any signed-in-aware" gate that passes.
     const allowed = checks.length === 0
         ? true
