@@ -16,6 +16,7 @@ export {
   makeChangeAccessCallable,
   makeAssignDefaultRoleTrigger,
 } from './functions';
+export { makeFirebaseMemberIdentity } from './memberIdentity';
 export type {
   CallableAuthLike,
   SetRoleData,

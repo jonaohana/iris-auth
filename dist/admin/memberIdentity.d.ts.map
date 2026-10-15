@@ -1,0 +1,1 @@
+{"version":3,"file":"memberIdentity.d.ts","sourceRoot":"","sources":["../../src/admin/memberIdentity.ts"],"names":[],"mappings":"AAAA,gGAAgG;AAChG,OAAO,EAAW,KAAK,IAAI,IAAI,SAAS,EAAE,MAAM,qBAAqB,CAAC;AACtE,OAAO,KAAK,EAAE,GAAG,EAAE,MAAM,oBAAoB,CAAC;AAC9C,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,YAAY,CAAC;AAEjD,wBAAgB,0BAA0B,CAAC,GAAG,CAAC,EAAE,GAAG,EAAE,IAAI,CAAC,EAAE,SAAS,GAAG,cAAc,CAoBtF"}

@@ -11,7 +11,8 @@
   },
   "include": [
     "src/access/**/*",
-    "src/admin/**/*"
+    "src/admin/**/*",
+    "src/members/**/*"
   ],
   "exclude": [
     "node_modules",

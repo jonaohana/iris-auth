@@ -282,6 +282,39 @@ Tokens refresh within ~1 hour, so a reduced grant is only enforced immediately w
 
 ---
 
+## Members: stores, teams and their roles (`@iris/auth/members`)
+
+For people who work inside one store / team / org of an app, use members instead of claims. Firebase proves who
+they are; the app's own database says which scope and role they hold. Removal is immediate, there is no 1000-byte
+limit, and one person can belong to many scopes. (The `tenants` claims above still work but new code should use this.)
+
+1. **Declare roles per app** (titles, levels, permissions) with `defineCatalog`:
+
+```ts
+const catalog = defineCatalog({
+  app: 'ganjahub',
+  roles: {
+    owner:   { title: 'Owner',   level: 30, permissions: ['*'] },
+    manager: { title: 'Manager', level: 20, permissions: ['members.manage', 'members.view', 'products.*', 'orders.*'] },
+    staff:   { title: 'Staff',   level: 10, permissions: ['orders.view', 'orders.update'] },
+  },
+});
+```
+
+2. **Back it with the app's table** by implementing `MembershipStore` (get / list / listForUser / save / remove).
+3. **Wire the service:** `makeMemberService({ catalog, store, identity: makeFirebaseMemberIdentity() })` from
+   `@iris/auth/admin`, then expose `invite`, `change`, `remove`, `list`, `mine` on your routes.
+4. **Protect routes:** `makeMemberGuards({ catalog, store, getUid, getClaims, scopeFrom }).requirePermission('products.write')`
+   sets `req.scope` (e.g. the store id) from the verified membership; it cannot be forged by the request.
+
+**Who may add whom:** super admins and the app's admins manage any scope of the app. Anyone else needs
+`members.manage` in that scope, may only touch and assign roles strictly below their own level, may only hand out
+permissions they hold, and cannot change themselves. `invite` creates the Firebase account if needed and returns a
+set-password link for the app to email (Firebase cannot send it). Deactivating, lowering or removing someone ends
+their sessions.
+
+---
+
 ## Enforcing roles in security rules
 
 Claims are available in rules as `request.auth.token.<claim>`.
