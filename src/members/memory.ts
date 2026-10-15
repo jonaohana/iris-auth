@@ -15,16 +15,16 @@ export function createMemoryMembershipStore(seed: Member[] = []): MembershipStor
   };
 }
 
-export function createMemoryIdentity(existing: Record<string, string> = {}): MemberIdentity & { revoked: string[]; accounts: Record<string, string> } {
+export function createMemoryIdentity(existing: Record<string, string> = {}, unverified: string[] = []): MemberIdentity & { revoked: string[]; accounts: Record<string, string> } {
   const accounts: Record<string, string> = { ...existing }; // email -> uid
   const revoked: string[] = [];
   return {
     accounts,
     revoked,
     findOrCreate: async (email) => {
-      if (accounts[email]) return { uid: accounts[email], created: false };
+      if (accounts[email]) return { uid: accounts[email], created: false, verified: !unverified.includes(email) };
       accounts[email] = 'uid-' + email.split('@')[0];
-      return { uid: accounts[email], created: true };
+      return { uid: accounts[email], created: true, verified: false };
     },
     inviteLink: async (email) => 'https://example.test/set-password?e=' + encodeURIComponent(email),
     revokeSessions: async (uid) => { revoked.push(uid); },

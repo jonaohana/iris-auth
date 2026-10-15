@@ -148,7 +148,7 @@ function run(guard: any, req: any) {
 
 test('middleware: scope comes from the verified membership and cannot be forged', async () => {
   const w = world();
-  const g = makeMemberGuards({ catalog, store: w.store, getUid: (r) => r.uid, getClaims: (r) => r.claims, scopeFrom: (r) => r.headers?.scope });
+  const g = makeMemberGuards({ catalog, store: w.store, getUid: (r) => r.uid, isEmailVerified: (r) => r.verified !== false, getClaims: (r) => r.claims, scopeFrom: (r) => r.headers?.scope });
   const need = g.requirePermission('products.write');
 
   assert.equal((await run(need, {})).status, 401);
@@ -159,13 +159,14 @@ test('middleware: scope comes from the verified membership and cannot be forged'
   assert.equal((await run(need, { uid: 'mgr', headers: { scope: S2 } })).status, 403); // someone else's store
   assert.equal((await run(need, { uid: 'stf', headers: { scope: S1 } })).status, 403); // role lacks the permission
   assert.equal((await run(need, { uid: 'nobody', headers: { scope: S1 } })).status, 403);
+  assert.equal((await run(need, { uid: 'mgr', verified: false, headers: { scope: S1 } })).status, 403); // unverified email
   const admin = { uid: 'ga', claims: parseClaims({ apps: { ganjahub: 'admin' } }), headers: { scope: S2 } } as any;
   assert.equal((await run(need, admin)).nexted, true);
 });
 
 test('middleware: without a named scope, a one-store member is placed automatically', async () => {
   const w = world();
-  const g = makeMemberGuards({ catalog, store: w.store, getUid: (r) => r.uid });
+  const g = makeMemberGuards({ catalog, store: w.store, getUid: (r) => r.uid, isEmailVerified: () => true });
   const req = { uid: 'mgr' } as any;
   assert.equal((await run(g.requirePermission('orders.view'), req)).nexted, true);
   assert.equal(req.scope, S1);
@@ -187,10 +188,22 @@ test('firebase identity: finds, creates, links, revokes', async () => {
     revokeRefreshTokens: async (uid: string) => { calls.push('revoke:' + uid); },
   };
   const id = makeFirebaseMemberIdentity(undefined, auth);
-  assert.deepEqual(await id.findOrCreate('a@x.com'), { uid: 'u1', created: false });
-  assert.deepEqual(await id.findOrCreate('new@x.com', 'New'), { uid: 'u3', created: true });
+  assert.deepEqual(await id.findOrCreate('a@x.com'), { uid: 'u1', created: false, verified: false });
+  assert.deepEqual(await id.findOrCreate('new@x.com', 'New'), { uid: 'u3', created: true, verified: false });
   await assert.rejects(id.findOrCreate('off@x.com'));
   assert.equal(await id.inviteLink('new@x.com'), 'link:new@x.com');
   await id.revokeSessions('u1');
   assert.deepEqual(calls, ['revoke:u1']);
+});
+
+test('inviting an UNVERIFIED existing account sends a link and ends its sessions (squatter lock-out)', async () => {
+  const store = createMemoryMembershipStore([member('own', 'owner')]);
+  const identity = createMemoryIdentity({ 'sq@x.com': 'sq', 'ok@x.com': 'ok' }, ['sq@x.com']);
+  const svc = makeMemberService({ catalog, store, identity });
+  const a = await svc.invite(who('own'), S1, { email: 'sq@x.com', role: 'staff' });
+  assert.ok(a.inviteLink);
+  assert.deepEqual(identity.revoked, ['sq']);
+  const b = await svc.invite(who('own'), S1, { email: 'ok@x.com', role: 'staff' });
+  assert.equal(b.inviteLink, null);
+  assert.deepEqual(identity.revoked, ['sq']);
 });

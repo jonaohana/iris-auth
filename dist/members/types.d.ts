@@ -39,10 +39,14 @@ export interface MembershipStore {
 }
 /** The sign-in system behind the members: Firebase in production (see admin/memberIdentity), a fake in tests. */
 export interface MemberIdentity {
-    /** Finds the account for this email or creates it. `created` is true for a brand-new account. */
+    /**
+     * Finds the account for this email or creates it. `created` is true for a brand-new account; `verified` says whether
+     * the email has been proven (an unverified account may belong to someone who merely typed the address in).
+     */
     findOrCreate(email: string, name?: string): Promise<{
         uid: string;
         created: boolean;
+        verified: boolean;
     }>;
     /** A link the new person opens to choose their own password. The app emails it. */
     inviteLink(email: string): Promise<string | null>;

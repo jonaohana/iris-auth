@@ -6,12 +6,14 @@ exports.makeMemberGuards = makeMemberGuards;
 const access_1 = require("../access");
 const catalog_1 = require("./catalog");
 /** Sets `req.member` and `req.scope` (what routes should filter by, e.g. storeId) on success. */
-function makeMemberGuards({ catalog, store, getUid, getClaims, scopeFrom }) {
+function makeMemberGuards({ catalog, store, getUid, isEmailVerified, getClaims, scopeFrom }) {
     const requirePermission = (permission) => async (req, res, next) => {
         try {
             const uid = getUid(req);
             if (!uid)
                 return res.status(401).json({ error: 'Sign in required' });
+            if (!isEmailVerified(req))
+                return res.status(403).json({ error: 'Verify your email to continue' });
             const claims = getClaims?.(req);
             const admin = !!claims && (0, access_1.hasAppRole)(claims, catalog.app, 'admin');
             const asked = scopeFrom?.(req) || undefined;

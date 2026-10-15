@@ -18,7 +18,7 @@ export interface ChangeInput {
     active?: boolean;
 }
 export interface InviteResult {
-    member: Member; /** Present only for a brand-new account: email it to them. */
+    member: Member; /** Present for a new or unverified account: email it to them. */
     inviteLink: string | null;
 }
 export interface MemberServiceOptions {

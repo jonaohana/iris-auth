@@ -70,12 +70,19 @@ function makeMemberService({ catalog, store, identity }) {
             const name = text(input.name, 100, 'Name');
             const title = text(input.title, 60, 'Title');
             checkGrant(s, input.role ?? '', input.permissions);
-            const { uid, created } = await identity.findOrCreate(email, name);
+            const { uid, created, verified } = await identity.findOrCreate(email, name);
             if (await store.get(scope, uid))
                 throw new types_1.MemberError('That person is already on this team.', 'conflict');
             const member = { uid, email, name, scope, role: input.role, title, permissions: input.permissions?.length ? input.permissions : undefined, active: true };
             await store.save(member);
-            return { member, inviteLink: created ? await identity.inviteLink(email) : null };
+            if (created)
+                return { member, inviteLink: await identity.inviteLink(email) };
+            if (verified)
+                return { member, inviteLink: null };
+            // An unverified account may have been registered by someone else using this address. Opening the link proves
+            // the email and resets the password, and ending the old sessions locks any squatter out.
+            await identity.revokeSessions(uid);
+            return { member, inviteLink: await identity.inviteLink(email) };
         },
         /** Change role, title, extra permissions, or switch the person off/on. */
         async change(caller, scope, uid, input) {

@@ -13,17 +13,20 @@ export interface MemberGuardOptions {
   store: MembershipStore;
   /** The verified Firebase uid for this request, or null when not signed in. */
   getUid: (req: Req) => string | null | undefined;
+  /** Whether the verified token's email is verified. Required: an unverified address proves nothing about who owns it. */
+  isEmailVerified: (req: Req) => boolean;
   getClaims?: (req: Req) => AccessClaims | null | undefined;
   /** Where the request names its scope (header, param...). Optional when users belong to one scope. */
   scopeFrom?: (req: Req) => string | null | undefined;
 }
 
 /** Sets `req.member` and `req.scope` (what routes should filter by, e.g. storeId) on success. */
-export function makeMemberGuards({ catalog, store, getUid, getClaims, scopeFrom }: MemberGuardOptions) {
+export function makeMemberGuards({ catalog, store, getUid, isEmailVerified, getClaims, scopeFrom }: MemberGuardOptions) {
   const requirePermission = (permission: string) => async (req: Req, res: Res, next: Next) => {
     try {
       const uid = getUid(req);
       if (!uid) return res.status(401).json({ error: 'Sign in required' });
+      if (!isEmailVerified(req)) return res.status(403).json({ error: 'Verify your email to continue' });
       const claims = getClaims?.(req);
       const admin = !!claims && hasAppRole(claims, catalog.app, 'admin');
 

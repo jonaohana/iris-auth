@@ -16,7 +16,7 @@ function createMemoryMembershipStore(seed = []) {
         remove: async (scope, uid) => { rows.delete(key(scope, uid)); },
     };
 }
-function createMemoryIdentity(existing = {}) {
+function createMemoryIdentity(existing = {}, unverified = []) {
     const accounts = { ...existing }; // email -> uid
     const revoked = [];
     return {
@@ -24,9 +24,9 @@ function createMemoryIdentity(existing = {}) {
         revoked,
         findOrCreate: async (email) => {
             if (accounts[email])
-                return { uid: accounts[email], created: false };
+                return { uid: accounts[email], created: false, verified: !unverified.includes(email) };
             accounts[email] = 'uid-' + email.split('@')[0];
-            return { uid: accounts[email], created: true };
+            return { uid: accounts[email], created: true, verified: false };
         },
         inviteLink: async (email) => 'https://example.test/set-password?e=' + encodeURIComponent(email),
         revokeSessions: async (uid) => { revoked.push(uid); },

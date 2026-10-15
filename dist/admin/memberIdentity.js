@@ -11,13 +11,13 @@ function makeFirebaseMemberIdentity(app, auth) {
                 const user = await a.getUserByEmail(email);
                 if (user.disabled)
                     throw new Error('That account is disabled.');
-                return { uid: user.uid, created: false };
+                return { uid: user.uid, created: false, verified: !!user.emailVerified };
             }
             catch (err) {
                 if (err?.code !== 'auth/user-not-found')
                     throw err;
                 const user = await a.createUser({ email, displayName: name, emailVerified: false });
-                return { uid: user.uid, created: true };
+                return { uid: user.uid, created: true, verified: false };
             }
         },
         // Firebase generates the link but cannot email it: the app sends it with its own mailer.
