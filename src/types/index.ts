@@ -232,6 +232,18 @@ export interface LoginScreenProps {
   fillAboveCard?: ReactNode;
   /** Space kept free below the compact card (e.g. a floating bottom nav). Default 20. */
   bottomInset?: number;
+  /**
+   * Web only: size the screen to exactly the visible viewport (100dvh) minus the
+   * host's fixed chrome, and never scroll. `top` / `bottom` = px covered by a
+   * fixed header / bottom nav. Use with `compactCard` on phones.
+   */
+  fitViewport?: { top?: number; bottom?: number };
+  /**
+   * Tighter card (smaller title, one row of icon-only social buttons, 42px
+   * buttons/inputs, tighter links) — what native gets with `fillAboveCard`,
+   * available on web for short / narrow screens.
+   */
+  compactCard?: boolean;
   /** Card background (any CSS color) — overrides the white modalOpacity card. */
   cardColor?: string;
   /** Translucent box color (any CSS color, e.g. 'rgba(0,0,0,0.45)') drawn behind title, divider text and links — use with light header/footer text colors on a see-through card. */

@@ -29,6 +29,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   aboveCard,
   fillAboveCard,
   bottomInset,
+  fitViewport,
+  compactCard,
   cardColor,
   textBackdropColor,
   textShadowColor,
@@ -125,7 +127,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     : null;
 
   // Native + fillAboveCard: the hero takes every pixel above the card and the card goes compact.
-  const compact = Platform.OS !== 'web' && !!fillAboveCard;
+  const isWeb = Platform.OS === 'web';
+  const compact = (!isWeb && !!fillAboveCard) || (isWeb && !!compactCard);
+  // Web: exactly the visible viewport minus the host's fixed chrome — no page scroll.
+  // (No `flex: 0` here: react-native-web turns it into flex-basis 0%, which beats
+  // `height` in the host's flex column and collapses the screen to nothing.)
+  const fitH = isWeb && fitViewport ? `calc(100dvh - ${(fitViewport.top ?? 0) + (fitViewport.bottom ?? 0)}px)` : null;
+  const fit: any = fitH
+    ? { minHeight: fitH, height: fitH, maxHeight: fitH, flexBasis: fitH, flexGrow: 0, flexShrink: 0, overflow: 'hidden', paddingVertical: 8 }
+    : null;
+  // Apple glyph exists only in Apple fonts; elsewhere an icon-only button shows a word instead.
+  const appleGlyph = Platform.OS === 'ios'
+    || (isWeb && typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent || ''));
 
   const Container = Platform.OS === 'web' ? View : KeyboardAvoidingView;
   const containerProps = Platform.OS === 'web' ? {} : { behavior: 'padding' as const };
@@ -135,7 +148,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       styles.content,
       (vanta || background) && Platform.OS === 'web' ? [
         styles.contentCard,
-        { backgroundColor: cardColor ?? `rgba(255,255,255,${modalOpacity})` } as any
+        { backgroundColor: cardColor ?? `rgba(255,255,255,${modalOpacity})` } as any,
+        compact && styles.contentCardWebCompact,
       ] : null,
       background && Platform.OS !== 'web' ? [
         styles.contentCardNative,
@@ -193,7 +207,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   loading={localLoading && !email}
                   disabled={localLoading}
                   // U+F8FF is the Apple logo on Apple platforms (tofu elsewhere).
-                  icon={<Text style={styles.appleIcon}>{Platform.OS === 'ios' ? '\uF8FF' : ''}</Text>}
+                  icon={<Text style={[styles.appleIcon, compact && !appleGlyph && { fontSize: 14, fontWeight: '600' }]}>{appleGlyph ? '\uF8FF' : compact ? 'Apple' : ''}</Text>}
                 />
               )}
             </View>
@@ -258,7 +272,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <Pressable
                     onPress={() => setIsSignUp(!isSignUp)}
                     disabled={localLoading}
-                    style={styles.toggleButton}
+                    style={[styles.toggleButton, compact && styles.toggleButtonCompact]}
                   >
                     <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any, textBox, textGlow]}>
                       {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
@@ -271,7 +285,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Pressable
               onPress={() => setUsePhoneAuth(!usePhoneAuth)}
               disabled={localLoading}
-              style={styles.toggleButton}
+              style={[styles.toggleButton, compact && styles.toggleButtonCompact]}
             >
               <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any, textBox, textGlow]}>
                 {usePhoneAuth ? 'Use email instead' : 'Use phone number instead'}
@@ -281,7 +295,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Pressable
               onPress={() => { setShowEmailForm(false); setUsePhoneAuth(false); }}
               disabled={localLoading}
-              style={styles.toggleButton}
+              style={[styles.toggleButton, compact && styles.toggleButtonCompact]}
             >
               <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any, textBox, textGlow]}>
                 Back to all sign-in options
@@ -335,7 +349,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         disabled={localLoading}
       />
 
-      <Pressable onPress={handleSignOut} disabled={localLoading} style={styles.toggleButton}>
+      <Pressable onPress={handleSignOut} disabled={localLoading} style={[styles.toggleButton, compact && styles.toggleButtonCompact]}>
         <Text style={[styles.toggleText, footerTextColor && { color: footerTextColor } as any, textBox, textGlow]}>
           Not you? Log out to switch accounts
         </Text>
@@ -347,10 +361,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   if (background) {
     return (
-      <Container style={[styles.container, styles.containerCustomBg]} {...containerProps}>
+      <Container style={[styles.container, styles.containerCustomBg, fit]} {...containerProps}>
         {background}
         {aboveCard}
-        {compact && !user ? <View style={styles.fillSlot}>{fillAboveCard}</View> : null}
+        {compact && !user && fillAboveCard ? <View style={styles.fillSlot}>{fillAboveCard}</View> : null}
         {screenContent}
       </Container>
     );
@@ -420,6 +434,10 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.xl,
     borderRadius: 20,
   },
+  contentCardWebCompact: {
+    ...Platform.select({ web: { padding: 18, paddingTop: 16, paddingBottom: 14, flexShrink: 0 } as any }),
+  },
+  toggleButtonCompact: { marginTop: 10 },
   contentCardCompact: {
     marginHorizontal: 14,
     marginBottom: 20,
@@ -496,7 +514,8 @@ const styles = StyleSheet.create({
   facebookIcon: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1877F2',
+    // white on the blue Facebook button (blue-on-blue was invisible)
+    color: '#ffffff',
   },
   emailIcon: {
     fontSize: 18,

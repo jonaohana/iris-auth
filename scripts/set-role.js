@@ -16,7 +16,7 @@
  *   node scripts/set-role.js --uid <uid> --role editor \
  *     --permissions posts.publish,posts.delete
  *
- *   # Or point at the key file explicitly:
+ *   # Or FIREBASE_SERVICE_ACCOUNT_BASE64=<base64 key> (same variable the apps' APIs use), or point at the key file explicitly:
  *   node scripts/set-role.js --key ./service-account.json --email you@x.com --role admin
  *
  * Tiers (see ROLES.md "Access tiers"):
@@ -64,11 +64,23 @@ async function main() {
     process.exit(args.help ? 0 : 1);
   }
 
-  // Initialize admin. Prefer an explicit --key, else GOOGLE_APPLICATION_CREDENTIALS.
+  // Initialize admin: an explicit --key, else FIREBASE_SERVICE_ACCOUNT_BASE64 (what the apps' APIs read), else GOOGLE_APPLICATION_CREDENTIALS.
+  // With none of them firebase-admin fails later with "Unable to detect a Project Id" — say what is missing instead.
   if (args.key) {
     admin.initializeApp({ credential: admin.credential.cert(require(require('path').resolve(args.key))) });
-  } else {
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8'))) });
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     admin.initializeApp();
+  } else {
+    console.error([
+      'No Firebase service-account key. This script changes users\' claims, so it needs one. Either:',
+      '  --key ./service-account.json                       (path to the key file), or',
+      '  GOOGLE_APPLICATION_CREDENTIALS=./service-account.json, or',
+      '  FIREBASE_SERVICE_ACCOUNT_BASE64=<base64 of the key>',
+      'Get the key: Firebase console → Project settings → Service accounts → Generate new private key. Keep it out of git.',
+    ].join('\n'));
+    process.exit(1);
   }
 
   const auth = admin.auth();
